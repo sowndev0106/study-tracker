@@ -1,9 +1,10 @@
 import { StudyRecord, WeeklyTarget, AppDataExport } from '../types'
-import { DEFAULT_TARGETS } from '../../worker/r2'
+import { DEFAULT_TARGETS, DEFAULT_TOTAL_HOURS_TARGET } from '../../worker/r2'
 
 const API_BASE = '/api'
 const LOCAL_STORAGE_RECORDS = 'study_tracker_records_v1'
 const LOCAL_STORAGE_TARGETS = 'study_tracker_targets_v1'
+const LOCAL_STORAGE_SETTINGS = 'study_tracker_settings_v1'
 
 // Helper for local storage backup/fallback
 function getLocalRecords(): StudyRecord[] {
@@ -40,6 +41,23 @@ function saveLocalTargets(targets: WeeklyTarget[]) {
   }
 }
 
+function getLocalSettings(): { totalHoursTarget: number } {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_SETTINGS)
+    return raw ? JSON.parse(raw) : { totalHoursTarget: DEFAULT_TOTAL_HOURS_TARGET }
+  } catch {
+    return { totalHoursTarget: DEFAULT_TOTAL_HOURS_TARGET }
+  }
+}
+
+function saveLocalSettings(settings: { totalHoursTarget: number }) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_SETTINGS, JSON.stringify(settings))
+  } catch (e) {
+    console.error('Failed to save settings to localStorage', e)
+  }
+}
+
 export const api = {
   // Check health and storage backend
   async checkHealth(): Promise<{ status: string; storage: string; r2Bound: boolean }> {
@@ -54,6 +72,35 @@ export const api = {
         r2Bound: false
       }
     }
+  },
+
+  // Settings
+  async getSettings(): Promise<{ totalHoursTarget: number }> {
+    try {
+      const res = await fetch(`${API_BASE}/settings`)
+      if (!res.ok) throw new Error('Failed to fetch settings')
+      const settings = (await res.json()) as { totalHoursTarget: number }
+      saveLocalSettings(settings)
+      return settings
+    } catch (err) {
+      console.warn('API settings offline, using local storage:', err)
+      return getLocalSettings()
+    }
+  },
+
+  async updateSettings(settings: { totalHoursTarget: number }): Promise<{ totalHoursTarget: number }> {
+    saveLocalSettings(settings)
+    try {
+      const res = await fetch(`${API_BASE}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+      if (!res.ok) throw new Error('Failed to update settings')
+    } catch (err) {
+      console.warn('API updateSettings offline, saved locally:', err)
+    }
+    return settings
   },
 
   // Targets
@@ -97,7 +144,6 @@ export const api = {
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch records')
       const records = (await res.json()) as StudyRecord[]
-      // If fetching all records, cache locally
       if (!params || Object.keys(params).length === 0) {
         saveLocalRecords(records)
       }
@@ -199,9 +245,11 @@ export const api = {
       if (!res.ok) throw new Error('Failed to export from server')
       return await res.json()
     } catch {
+      const settings = getLocalSettings()
       return {
         version: '1.0',
         exportedAt: new Date().toISOString(),
+        totalHoursTarget: settings.totalHoursTarget,
         targets: getLocalTargets(),
         records: getLocalRecords()
       }
@@ -212,6 +260,9 @@ export const api = {
   async importData(data: AppDataExport): Promise<{ success: boolean; recordsCount: number }> {
     saveLocalRecords(data.records)
     saveLocalTargets(data.targets)
+    if (data.totalHoursTarget) {
+      saveLocalSettings({ totalHoursTarget: data.totalHoursTarget })
+    }
     try {
       const res = await fetch(`${API_BASE}/import`, {
         method: 'POST',

@@ -18,14 +18,21 @@ export interface WeeklyTarget {
   subject: SubjectType
   name: string
   targetSessionsPerWeek: number
+  targetHoursPerWeek: number // Hours goal for this subject per week (e.g. 2.0)
   minDurationMinutes?: number
   color: string
   iconName?: 'cloud' | 'code' | 'cpu' | 'terminal' | 'book' | 'star'
 }
 
+export interface WeeklyGoalSettings {
+  totalHoursTarget: number // Total hours goal for the whole week (e.g. 6.0)
+  targets: WeeklyTarget[]
+}
+
 export interface AppDataExport {
   version: string
   exportedAt: string
+  totalHoursTarget?: number
   targets: WeeklyTarget[]
   records: StudyRecord[]
 }
@@ -34,14 +41,21 @@ export interface WeekProgressSummary {
   weekStart: string // YYYY-MM-DD
   weekEnd: string // YYYY-MM-DD
   weekNumber: number
+  totalMinutes: number
+  totalHours: number
+  totalHoursTarget: number
+  isTotalHoursCompleted: boolean
+  totalSessions: number
   targets: {
     target: WeeklyTarget
     currentSessions: number
     targetSessions: number
     totalMinutes: number
+    actualHours: number
+    targetHours: number
+    isSessionsCompleted: boolean
+    isHoursCompleted: boolean
     isCompleted: boolean
     records: StudyRecord[]
   }[]
-  totalMinutes: number
-  totalSessions: number
 }

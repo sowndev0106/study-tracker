@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react'
 export const App: React.FC = () => {
   const [records, setRecords] = useState<StudyRecord[]>([])
   const [targets, setTargets] = useState<WeeklyTarget[]>([])
+  const [totalHoursTarget, setTotalHoursTarget] = useState<number>(6.0)
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date>(new Date())
 
@@ -44,15 +45,19 @@ export const App: React.FC = () => {
     const initData = async () => {
       try {
         setIsLoading(true)
-        const [health, targetsData, recordsData] = await Promise.all([
+        const [health, targetsData, recordsData, settingsData] = await Promise.all([
           api.checkHealth(),
           api.getTargets(),
-          api.getRecords()
+          api.getRecords(),
+          api.getSettings()
         ])
 
         setStorageStatus(health)
         setTargets(targetsData)
         setRecords(recordsData)
+        if (settingsData?.totalHoursTarget) {
+          setTotalHoursTarget(settingsData.totalHoursTarget)
+        }
       } catch (err) {
         console.error('Initialization error:', err)
       } finally {
@@ -65,8 +70,8 @@ export const App: React.FC = () => {
 
   // Calculate week progress
   const weekProgress = useMemo(() => {
-    return calculateWeekProgress(records, targets, selectedWeekDate)
-  }, [records, targets, selectedWeekDate])
+    return calculateWeekProgress(records, targets, selectedWeekDate, totalHoursTarget)
+  }, [records, targets, selectedWeekDate, totalHoursTarget])
 
   // --- Handlers ---
   const handleOpenNewSession = (date?: Date, subject?: string) => {
@@ -104,10 +109,18 @@ export const App: React.FC = () => {
     setTargets(saved)
   }
 
+  const handleSaveTotalHoursTarget = async (hours: number) => {
+    await api.updateSettings({ totalHoursTarget: hours })
+    setTotalHoursTarget(hours)
+  }
+
   const handleImportData = async (data: AppDataExport) => {
     const res = await api.importData(data)
     setRecords(data.records)
     setTargets(data.targets)
+    if (data.totalHoursTarget) {
+      setTotalHoursTarget(data.totalHoursTarget)
+    }
     return res
   }
 
@@ -203,7 +216,9 @@ export const App: React.FC = () => {
         isOpen={targetModalOpen}
         onClose={() => setTargetModalOpen(false)}
         targets={targets}
+        totalHoursTarget={totalHoursTarget}
         onSaveTargets={handleSaveTargets}
+        onSaveTotalHoursTarget={handleSaveTotalHoursTarget}
       />
 
       {/* Export / Import Modal */}

@@ -10,7 +10,9 @@ import {
   Plus,
   Terminal,
   Cloud,
-  Code
+  Code,
+  Target,
+  Sparkles
 } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget } from '../types'
 import { formatMinutes, fireCelebration, formatWeekRange } from '../utils/helpers'
@@ -31,7 +33,10 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
 }) => {
   const previousCompletedRef = useRef<boolean>(false)
 
-  const allCompleted = progress.targets.length > 0 && progress.targets.every(t => t.isCompleted)
+  const allCompleted =
+    progress.targets.length > 0 &&
+    progress.targets.every(t => t.isCompleted) &&
+    progress.isTotalHoursCompleted
 
   useEffect(() => {
     if (allCompleted && !previousCompletedRef.current) {
@@ -67,6 +72,15 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
     }
   }
 
+  const hoursPercent = Math.min(
+    100,
+    Math.round((progress.totalHours / (progress.totalHoursTarget || 1)) * 100)
+  )
+  const remainingHours = Math.max(
+    0,
+    Math.round((progress.totalHoursTarget - progress.totalHours) * 10) / 10
+  )
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs transition-all">
       {/* Week Header & Switcher */}
@@ -78,9 +92,9 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
               <span>Mục tiêu tuần {progress.weekNumber}</span>
             </h2>
             {allCompleted && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <Award className="w-3.5 h-3.5 text-emerald-600" />
-                Đạt 100% mục tiêu!
+                Đạt 100% mục tiêu tuần!
               </span>
             )}
           </div>
@@ -93,7 +107,7 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
         <div className="flex items-center gap-1.5 self-start sm:self-center">
           <button
             onClick={handleCurrentWeek}
-            className="px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-1"
+            className="px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-1 shadow-2xs"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Tuần này</span>
@@ -118,91 +132,160 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
         </div>
       </div>
 
-      {/* Target Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {progress.targets.map(({ target, currentSessions, targetSessions, totalMinutes, isCompleted }) => {
-          const percent = Math.min(100, Math.round((currentSessions / targetSessions) * 100))
-
-          return (
-            <div
-              key={target.id}
-              className={`relative rounded-xl border p-4 transition-all duration-200 ${
-                isCompleted
-                  ? 'border-emerald-200 bg-emerald-50/30'
-                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
-              }`}
-            >
-              {/* Card top row */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs font-semibold"
-                    style={{ backgroundColor: target.color }}
-                  >
-                    {getSubjectIcon(target.iconName)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 leading-tight">
-                      {target.name}
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      Mục tiêu: <span className="font-semibold text-slate-700">{targetSessions} bữa</span>/tuần
-                    </p>
-                  </div>
-                </div>
-
-                {isCompleted ? (
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-300">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Đạt</span>
+      {/* --- WEEKLY TOTAL HOURS TARGET BANNER --- */}
+      <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-amber-50/40 border border-blue-100 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Target className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Mục tiêu tổng số giờ tuần:
+                </span>
+                <span className="text-sm font-extrabold text-blue-700">
+                  {progress.totalHours}h / {progress.totalHoursTarget}h
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {progress.isTotalHoursCompleted ? (
+                  <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Đã hoàn thành chỉ tiêu thời gian tuần (+{Math.round((progress.totalHours - progress.totalHoursTarget) * 10) / 10}h)!
                   </span>
                 ) : (
-                  <button
-                    onClick={() => onQuickAddSubject(target)}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 active:scale-95 transition-all shadow-xs"
-                    title={`Thêm 1 buổi ${target.name}`}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-semibold text-slate-700">
-                    {currentSessions} / {targetSessions} bữa
-                  </span>
-                  <span className="font-medium text-slate-500">
-                    {percent}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${percent}%`,
-                      backgroundColor: isCompleted ? '#10B981' : target.color
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Card Bottom Stats */}
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/60 text-xs text-slate-600">
-                <div className="flex items-center gap-1 font-medium">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Đã học: <strong className="text-slate-800">{formatMinutes(totalMinutes)}</strong></span>
-                </div>
-                {target.minDurationMinutes && (
-                  <span className="text-[10px] text-slate-400">
-                    ~{target.minDurationMinutes}m/bữa
+                  <span>
+                    Còn thiếu <strong>{remainingHours}h</strong> để đạt chỉ tiêu tuần này.
                   </span>
                 )}
-              </div>
+              </p>
             </div>
-          )
-        })}
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <span className="text-xs font-bold text-slate-700 bg-white/80 px-2.5 py-1 rounded-md border border-slate-200/80 shadow-2xs">
+              {hoursPercent}% hoàn thành
+            </span>
+          </div>
+        </div>
+
+        {/* Global hours progress bar */}
+        <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              progress.isTotalHoursCompleted
+                ? 'bg-emerald-500'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            }`}
+            style={{ width: `${hoursPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Target Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {progress.targets.map(
+          ({
+            target,
+            currentSessions,
+            targetSessions,
+            actualHours,
+            targetHours,
+            totalMinutes,
+            isCompleted
+          }) => {
+            const sessionPercent = Math.min(
+              100,
+              Math.round((currentSessions / targetSessions) * 100)
+            )
+
+            return (
+              <div
+                key={target.id}
+                className={`relative rounded-xl border p-4 transition-all duration-200 ${
+                  isCompleted
+                    ? 'border-emerald-200 bg-emerald-50/30'
+                    : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                }`}
+              >
+                {/* Card top row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs font-semibold"
+                      style={{ backgroundColor: target.color }}
+                    >
+                      {getSubjectIcon(target.iconName)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900 leading-tight">
+                        {target.name}
+                      </h3>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                        <span>Mục tiêu: <strong className="text-slate-700">{targetSessions} bữa</strong></span>
+                        <span className="text-slate-300">•</span>
+                        <span><strong className="text-slate-700">{targetHours}h</strong>/tuần</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isCompleted ? (
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Đạt</span>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => onQuickAddSubject(target)}
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 active:scale-95 transition-all shadow-xs"
+                      title={`Thêm 1 buổi ${target.name}`}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Progress Bar (Sessions & Hours) */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-700">
+                      {currentSessions}/{targetSessions} bữa
+                      <span className="text-slate-400 font-normal ml-1">
+                        ({actualHours}/{targetHours}h)
+                      </span>
+                    </span>
+                    <span className="font-medium text-slate-500">
+                      {sessionPercent}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${sessionPercent}%`,
+                        backgroundColor: isCompleted ? '#10B981' : target.color
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Card Bottom Stats */}
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/60 text-xs text-slate-600">
+                  <div className="flex items-center gap-1 font-medium">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Đã học: <strong className="text-slate-800">{formatMinutes(totalMinutes)}</strong></span>
+                  </div>
+                  {target.minDurationMinutes && (
+                    <span className="text-[10px] text-slate-400">
+                      ~{target.minDurationMinutes}m/bữa
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          }
+        )}
       </div>
 
       {/* Week total summary footer */}
@@ -213,11 +296,12 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
           </span>
           <span className="text-slate-300">•</span>
           <span>
-            Tổng thời gian: <strong className="text-slate-800 font-semibold">{formatMinutes(progress.totalMinutes)}</strong>
+            Tổng thời gian: <strong className="text-slate-800 font-semibold">{formatMinutes(progress.totalMinutes)} ({progress.totalHours}h)</strong>
           </span>
         </div>
-        <div className="text-slate-400 text-[11px]">
-          * Bấm dấu + trên thẻ hoặc bấm ngày trên Calendar để ghi nhận buổi học.
+        <div className="text-slate-400 text-[11px] flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-amber-500" />
+          <span>Bấm nút "Mục tiêu tuần" để tùy chỉnh số buổi và số tiếng mục tiêu.</span>
         </div>
       </div>
     </div>

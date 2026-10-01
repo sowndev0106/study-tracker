@@ -5,6 +5,8 @@ import {
   saveRecordsToR2,
   getTargetsFromR2,
   saveTargetsToR2,
+  getSettingsFromR2,
+  saveSettingsToR2,
   exportAllData,
   importAllData
 } from './r2'
@@ -32,6 +34,21 @@ api.get('/health', (c) => {
     storage: hasR2 ? 'Cloudflare R2 Bucket' : 'In-Memory Fallback (Dev/No-R2)',
     r2Bound: hasR2
   })
+})
+
+// --- Settings API (Total hours target, etc.) ---
+api.get('/settings', async (c) => {
+  const settings = await getSettingsFromR2(c.env.TRACKING_BUCKET)
+  return c.json(settings)
+})
+
+api.put('/settings', async (c) => {
+  const body = await c.req.json<{ totalHoursTarget: number }>()
+  if (typeof body.totalHoursTarget !== 'number' || body.totalHoursTarget <= 0) {
+    return c.json({ error: 'totalHoursTarget must be a positive number' }, 400)
+  }
+  await saveSettingsToR2(body, c.env.TRACKING_BUCKET)
+  return c.json({ success: true, settings: body })
 })
 
 // --- Targets API ---
