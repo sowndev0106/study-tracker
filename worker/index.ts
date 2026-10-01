@@ -22,8 +22,32 @@ const app = new Hono<{ Bindings: Env }>()
 // Middleware
 app.use('*', cors())
 
+// Shared access password for the custom login screen (not browser Basic Auth)
+const ACCESS_TOKEN = 'interview'
+
 // API sub-router
 const api = new Hono<{ Bindings: Env }>()
+
+// Login endpoint stays open; every other /api/* route requires the token
+api.post('/auth/login', async (c) => {
+  const body = await c.req.json<{ password?: string }>().catch(() => ({}) as { password?: string })
+  if (body.password !== ACCESS_TOKEN) {
+    return c.json({ error: 'Invalid password' }, 401)
+  }
+  return c.json({ success: true, token: ACCESS_TOKEN })
+})
+
+api.use('*', async (c, next) => {
+  if (c.req.path.endsWith('/auth/login')) {
+    return next()
+  }
+  const header = c.req.header('Authorization') || ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : ''
+  if (token !== ACCESS_TOKEN) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  return next()
+})
 
 // Health & Status
 api.get('/health', (c) => {
@@ -115,6 +139,8 @@ api.post('/records', async (c) => {
       title: data.title || '',
       notes: data.notes || '',
       completed: data.completed !== undefined ? Boolean(data.completed) : true,
+      timeOfDay: data.timeOfDay || 'evening',
+      startTime: data.startTime || '',
       createdAt: now,
       updatedAt: now
     }

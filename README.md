@@ -44,7 +44,7 @@
 ## 📁 Cấu trúc thư mục
 
 ```text
-tracking-calendar/
+study-tracker/
 ├── src/
 │   ├── components/
 │   │   ├── CalendarView.tsx        # UI Lịch tháng tương tác
@@ -89,7 +89,7 @@ Lệnh sau sẽ chạy đồng thời cả Frontend Vite (cổng `5173`) và Clo
 npm run dev
 ```
 - Mở trình duyệt tại: **http://localhost:5173**
-- Khi chạy local, Wrangler sẽ tự động tạo một preview R2 storage giả lập trên máy tính của bạn (`tracking-calendar-db-preview`).
+- Khi chạy local, Wrangler sẽ tự động tạo một preview R2 storage giả lập trên máy tính của bạn (`study-tracker-db-preview`).
 
 ---
 
@@ -101,13 +101,13 @@ npx wrangler login
 ```
 
 ### Bước 2: Tạo R2 Bucket trên Cloudflare
-Chạy lệnh tạo bucket tên `tracking-calendar-db`:
+Chạy lệnh tạo bucket tên `study-tracker-db`:
 ```bash
-npx wrangler r2 bucket create tracking-calendar-db
+npx wrangler r2 bucket create study-tracker-db
 ```
 *(Nếu muốn tạo thêm bucket cho preview test local):*
 ```bash
-npx wrangler r2 bucket create tracking-calendar-db-preview
+npx wrangler r2 bucket create study-tracker-db-preview
 ```
 
 ### Bước 3: Deploy lên Cloudflare chỉ với 1 lệnh
@@ -117,10 +117,12 @@ npm run deploy
 Lệnh này sẽ:
 1. Build toàn bộ giao diện React sang thư mục `./dist`.
 2. Đẩy cả static frontend và Worker API lên Cloudflare Edge Network.
-3. Liên kết với Cloudflare R2 Bucket `tracking-calendar-db`.
+3. Liên kết với Cloudflare R2 Bucket `study-tracker-db`.
 
 Sau khi hoàn tất, terminal sẽ cung cấp URL public của bạn, ví dụ:
-`https://tracking-calendar.<your-subdomain>.workers.dev`
+`https://study-tracker.<your-subdomain>.workers.dev`
+
+Domain tùy chỉnh đã cấu hình trong `wrangler.jsonc`: `https://study-tracker.sowndev.com`
 
 ---
 

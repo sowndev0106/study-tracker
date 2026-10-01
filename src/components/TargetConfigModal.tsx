@@ -46,7 +46,7 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
       {
         id: newId,
         subject: `subject_${Date.now()}`,
-        name: 'Môn mới',
+        name: 'New Subject',
         targetSessionsPerWeek: 2,
         targetHoursPerWeek: 2.0,
         minDurationMinutes: 60,
@@ -58,7 +58,7 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
 
   const handleRemoveTarget = (index: number) => {
     if (targetList.length <= 1) {
-      alert('Bạn phải giữ ít nhất 1 mục tiêu.')
+      alert('You must keep at least 1 goal target.')
       return
     }
     const updated = targetList.filter((_, idx) => idx !== index)
@@ -91,16 +91,16 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Cấu hình mục tiêu tuần
+                Configure Weekly Goals
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Thiết lập số bữa học & tổng số tiếng mục tiêu mỗi tuần
+                Set target sessions and total study hours per week
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,63 +113,66 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
                 <Target className="w-4 h-4 text-blue-600" />
-                <span>Mục tiêu tổng số giờ học mỗi tuần:</span>
+                <span>Total Weekly Hours Target:</span>
               </label>
               <span className="text-sm font-extrabold text-blue-700">
-                {hoursGoal} tiếng / tuần
+                {hoursGoal} hrs / week
               </span>
             </div>
 
-            {/* Quick preset buttons */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               {HOURS_PRESETS.map((h) => (
                 <button
                   key={h}
                   type="button"
                   onClick={() => setHoursGoal(h)}
-                  className={`px-2.5 py-1 text-xs rounded-md border font-semibold transition-all ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                     hoursGoal === h
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  {h} tiếng
+                  {h} hrs
                 </button>
               ))}
-              <input
-                type="number"
-                min="1"
-                max="80"
-                step="0.5"
-                value={hoursGoal}
-                onChange={(e) => setHoursGoal(Math.max(0.5, Number(e.target.value)))}
-                className="w-20 px-2 py-1 text-xs font-bold text-center border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Tự nhập"
-              />
+              <div className="flex items-center gap-1 ml-auto">
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="0.5"
+                  value={hoursGoal}
+                  onChange={(e) => setHoursGoal(Math.max(1, parseFloat(e.target.value) || 1))}
+                  className="w-16 px-2 py-1 text-xs font-bold text-center border border-slate-300 rounded-lg bg-white"
+                  placeholder="Custom"
+                />
+                <span className="text-xs font-semibold text-slate-500">hrs</span>
+              </div>
             </div>
-            <p className="text-[11px] text-slate-500">
-              * Hệ thống sẽ tự động cộng dồn tất cả các buổi học trong tuần để đối chiếu với mục tiêu này.
+
+            <p className="text-[11px] text-slate-500 italic">
+              * The app automatically tracks all study sessions completed during the week against this total goal.
             </p>
           </div>
 
-          <div className="p-3 rounded-lg bg-amber-50/60 border border-amber-200/60 flex items-start gap-2.5 text-xs text-amber-800">
-            <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5 text-xs text-blue-800">
+            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <p>
-              Mục tiêu mặc định: <strong>AWS (2 bữa/tuần)</strong>,{' '}
-              <strong>Golang (2 bữa/tuần)</strong>, và <strong>LeetCode (2 bữa/tuần)</strong>.
+              Default goals: <strong>AWS (2 sessions/week)</strong>,{' '}
+              <strong>Golang (2 sessions/week)</strong>, and <strong>LeetCode (2 sessions/week)</strong>.
             </p>
           </div>
 
-          {/* PER-SUBJECT TARGETS */}
+          {/* Subject targets list */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Chi tiết mục tiêu theo từng môn
+              Subject Targets Breakdown
             </h4>
 
             {targetList.map((target, idx) => (
               <div
                 key={target.id}
-                className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-3 shadow-2xs"
+                className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3 hover:border-slate-300 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
@@ -177,30 +180,31 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
                       type="color"
                       value={target.color}
                       onChange={(e) => handleUpdateField(idx, 'color', e.target.value)}
-                      className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0"
-                      title="Chọn màu đại diện"
+                      className="w-6 h-6 rounded-md border border-slate-200 cursor-pointer p-0 bg-transparent"
+                      title="Choose subject color"
                     />
                     <input
                       type="text"
                       value={target.name}
                       onChange={(e) => handleUpdateField(idx, 'name', e.target.value)}
-                      className="px-2.5 py-1 text-sm font-bold border border-slate-200 rounded-md flex-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      placeholder="Subject Name (e.g. AWS Cloud)"
+                      className="font-bold text-sm text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 flex-1"
                     />
                   </div>
 
                   <button
                     onClick={() => handleRemoveTarget(idx)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                    title="Xóa môn này"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                    title="Remove subject"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-xs">
                   <div>
-                    <label className="block text-slate-500 mb-1 font-medium">
-                      Mục tiêu (bữa/tuần)
+                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">
+                      Sessions / week
                     </label>
                     <input
                       type="number"
@@ -208,76 +212,91 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
                       max="14"
                       value={target.targetSessionsPerWeek}
                       onChange={(e) =>
-                        handleUpdateField(idx, 'targetSessionsPerWeek', Math.max(1, Number(e.target.value)))
+                        handleUpdateField(
+                          idx,
+                          'targetSessionsPerWeek',
+                          Math.max(1, parseInt(e.target.value) || 1)
+                        )
                       }
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded-md font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-500 mb-1 font-medium">
-                      Mục tiêu (tiếng/tuần)
+                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">
+                      Hours / week
                     </label>
                     <input
                       type="number"
                       min="0.5"
-                      max="40"
+                      max="30"
                       step="0.5"
                       value={target.targetHoursPerWeek || 2.0}
                       onChange={(e) =>
-                        handleUpdateField(idx, 'targetHoursPerWeek', Math.max(0.5, Number(e.target.value)))
+                        handleUpdateField(
+                          idx,
+                          'targetHoursPerWeek',
+                          Math.max(0.5, parseFloat(e.target.value) || 1)
+                        )
                       }
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded-md font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-500 mb-1 font-medium">
-                      Gợi ý (phút/bữa)
+                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">
+                      Min mins / session
                     </label>
                     <input
                       type="number"
                       min="15"
-                      step="5"
+                      max="240"
+                      step="15"
                       value={target.minDurationMinutes || 60}
                       onChange={(e) =>
-                        handleUpdateField(idx, 'minDurationMinutes', Math.max(5, Number(e.target.value)))
+                        handleUpdateField(
+                          idx,
+                          'minDurationMinutes',
+                          Math.max(15, parseInt(e.target.value) || 60)
+                        )
                       }
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded-md font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
               </div>
             ))}
-          </div>
 
-          <button
-            onClick={handleAddTarget}
-            className="w-full py-2.5 border-2 border-dashed border-slate-200 hover:border-blue-400 hover:text-blue-600 rounded-xl text-xs font-semibold text-slate-600 flex items-center justify-center gap-1.5 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm môn học mới</span>
-          </button>
+            <button
+              onClick={handleAddTarget}
+              className="w-full py-2 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-600 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Subject</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+        <div className="p-4 sm:p-5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-all"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
           >
-            Hủy
+            Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-lg shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-lg shadow-sm shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
           >
-            <Check className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Đang lưu...' : 'Lưu cài đặt'}</span>
+            <Check className="w-4 h-4" />
+            <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
           </button>
         </div>
       </div>
     </div>
   )
 }
+
+export default TargetConfigModal

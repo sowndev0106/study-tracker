@@ -1,5 +1,7 @@
 export type SubjectType = 'aws' | 'golang' | 'leetcode' | string
 
+export type TimeOfDay = 'morning' | 'evening' | 'afternoon'
+
 export interface StudyRecord {
   id: string
   date: string // YYYY-MM-DD
@@ -11,6 +13,8 @@ export interface StudyRecord {
   completed: boolean
   createdAt: string
   updatedAt: string
+  timeOfDay?: TimeOfDay
+  startTime?: string // Optional specific time e.g. "08:30" or "20:00"
 }
 
 export interface WeeklyTarget {

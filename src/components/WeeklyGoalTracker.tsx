@@ -11,8 +11,7 @@ import {
   Terminal,
   Cloud,
   Code,
-  Target,
-  Sparkles
+  Target
 } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget } from '../types'
 import { formatMinutes, fireCelebration, formatWeekRange } from '../utils/helpers'
@@ -89,17 +88,17 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />
-              <span>Mục tiêu tuần {progress.weekNumber}</span>
+              <span>Week {progress.weekNumber} Goals</span>
             </h2>
             {allCompleted && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <Award className="w-3.5 h-3.5 text-emerald-600" />
-                Đạt 100% mục tiêu tuần!
+                100% Weekly Goals Achieved!
               </span>
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Thời gian: <span className="font-medium text-slate-700">{formatWeekRange(startDate, endDate)}</span>
+            Date range: <span className="font-medium text-slate-700">{formatWeekRange(startDate, endDate)}</span>
           </p>
         </div>
 
@@ -107,24 +106,24 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
         <div className="flex items-center gap-1.5 self-start sm:self-center">
           <button
             onClick={handleCurrentWeek}
-            className="px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-1 shadow-2xs"
+            className="px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
-            <span>Tuần này</span>
+            <span>This Week</span>
           </button>
           <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
             <button
               onClick={handlePrevWeek}
-              className="p-1.5 hover:bg-white text-slate-600 active:scale-95 transition-all"
-              title="Tuần trước"
+              className="p-1.5 hover:bg-white text-slate-600 active:scale-95 transition-all cursor-pointer"
+              title="Previous week"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="w-[1px] h-4 bg-slate-200"></div>
             <button
               onClick={handleNextWeek}
-              className="p-1.5 hover:bg-white text-slate-600 active:scale-95 transition-all"
-              title="Tuần sau"
+              className="p-1.5 hover:bg-white text-slate-600 active:scale-95 transition-all cursor-pointer"
+              title="Next week"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -142,7 +141,7 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Mục tiêu tổng số giờ tuần:
+                  Total Weekly Hours Goal:
                 </span>
                 <span className="text-sm font-extrabold text-blue-700">
                   {progress.totalHours}h / {progress.totalHoursTarget}h
@@ -152,52 +151,51 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
                 {progress.isTotalHoursCompleted ? (
                   <span className="text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Đã hoàn thành chỉ tiêu thời gian tuần (+{Math.round((progress.totalHours - progress.totalHoursTarget) * 10) / 10}h)!
+                    Weekly hours target completed (+{Math.round((progress.totalHours - progress.totalHoursTarget) * 10) / 10}h)!
                   </span>
                 ) : (
                   <span>
-                    Còn thiếu <strong>{remainingHours}h</strong> để đạt chỉ tiêu tuần này.
+                    Remaining <strong>{remainingHours}h</strong> to reach this week's target.
                   </span>
                 )}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <span className="text-xs font-bold text-slate-700 bg-white/80 px-2.5 py-1 rounded-md border border-slate-200/80 shadow-2xs">
-              {hoursPercent}% hoàn thành
+          <div className="text-right">
+            <span className="text-xs font-bold text-blue-700">
+              {hoursPercent}% completed
             </span>
           </div>
         </div>
 
-        {/* Global hours progress bar */}
-        <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+        {/* Global Progress bar */}
+        <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden shadow-inner">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
+            className={`h-full transition-all duration-500 rounded-full ${
               progress.isTotalHoursCompleted
-                ? 'bg-emerald-500'
-                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600'
             }`}
             style={{ width: `${hoursPercent}%` }}
           />
         </div>
       </div>
 
-      {/* Target Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      {/* Subject targets list */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-4">
         {progress.targets.map(
           ({
             target,
             currentSessions,
             targetSessions,
-            actualHours,
-            targetHours,
             totalMinutes,
+            targetHours,
             isCompleted
           }) => {
-            const sessionPercent = Math.min(
+            const pct = Math.min(
               100,
-              Math.round((currentSessions / targetSessions) * 100)
+              Math.round((currentSessions / (targetSessions || 1)) * 100)
             )
 
             return (
@@ -205,82 +203,78 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
                 key={target.id}
                 className={`relative rounded-xl border p-4 transition-all duration-200 ${
                   isCompleted
-                    ? 'border-emerald-200 bg-emerald-50/30'
-                    : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'border-emerald-200 bg-emerald-50/20'
+                    : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
                 }`}
+                style={{
+                  borderTopWidth: '3px',
+                  borderTopColor: target.color
+                }}
               >
-                {/* Card top row */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs font-semibold"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-xs"
                       style={{ backgroundColor: target.color }}
                     >
                       {getSubjectIcon(target.iconName)}
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-slate-900 leading-tight">
+                      <h3 className="font-bold text-sm text-slate-800">
                         {target.name}
                       </h3>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                        <span>Mục tiêu: <strong className="text-slate-700">{targetSessions} bữa</strong></span>
-                        <span className="text-slate-300">•</span>
-                        <span><strong className="text-slate-700">{targetHours}h</strong>/tuần</span>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <span>Goal: <strong className="text-slate-700">{targetSessions} sessions</strong></span>
+                        <span>•</span>
+                        <span><strong className="text-slate-700">{targetHours}h</strong>/week</span>
                       </div>
                     </div>
                   </div>
 
-                  {isCompleted ? (
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Đạt</span>
+                  {isCompleted && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full shadow-2xs">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Done</span>
                     </span>
-                  ) : (
-                    <button
-                      onClick={() => onQuickAddSubject(target)}
-                      className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 active:scale-95 transition-all shadow-xs"
-                      title={`Thêm 1 buổi ${target.name}`}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
                   )}
                 </div>
 
-                {/* Progress Bar (Sessions & Hours) */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-slate-700">
-                      {currentSessions}/{targetSessions} bữa
-                      <span className="text-slate-400 font-normal ml-1">
-                        ({actualHours}/{targetHours}h)
-                      </span>
-                    </span>
-                    <span className="font-medium text-slate-500">
-                      {sessionPercent}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${sessionPercent}%`,
-                        backgroundColor: isCompleted ? '#10B981' : target.color
-                      }}
-                    />
-                  </div>
+                {/* Progress bar */}
+                <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden mb-2">
+                  <div
+                    className="h-full transition-all duration-500 rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: target.color
+                    }}
+                  />
                 </div>
 
-                {/* Card Bottom Stats */}
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/60 text-xs text-slate-600">
-                  <div className="flex items-center gap-1 font-medium">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Đã học: <strong className="text-slate-800">{formatMinutes(totalMinutes)}</strong></span>
+                {/* Stats & Quick Log */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-slate-700">
+                      {currentSessions}/{targetSessions} sessions
+                    </div>
+                    <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>Studied: <strong className="text-slate-800">{formatMinutes(totalMinutes)}</strong></span>
+                      {target.minDurationMinutes && (
+                        <span className="text-slate-400 font-normal">
+                          (~{target.minDurationMinutes}m/session)
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {target.minDurationMinutes && (
-                    <span className="text-[10px] text-slate-400">
-                      ~{target.minDurationMinutes}m/bữa
-                    </span>
-                  )}
+
+                  <button
+                    onClick={() => onQuickAddSubject(target)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-100 active:scale-95 transition-all text-slate-700 shadow-2xs cursor-pointer"
+                    title={`Add 1 session for ${target.name}`}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Log</span>
+                  </button>
                 </div>
               </div>
             )
@@ -288,22 +282,23 @@ export const WeeklyGoalTracker: React.FC<WeeklyGoalTrackerProps> = ({
         )}
       </div>
 
-      {/* Week total summary footer */}
-      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+      {/* Week Footer stats */}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
         <div className="flex items-center gap-4">
           <span>
-            Tổng buổi tuần này: <strong className="text-slate-800 font-semibold">{progress.totalSessions} buổi</strong>
+            Total sessions this week: <strong className="text-slate-800 font-semibold">{progress.totalSessions} sessions</strong>
           </span>
-          <span className="text-slate-300">•</span>
+          <span>•</span>
           <span>
-            Tổng thời gian: <strong className="text-slate-800 font-semibold">{formatMinutes(progress.totalMinutes)} ({progress.totalHours}h)</strong>
+            Total study time: <strong className="text-slate-800 font-semibold">{formatMinutes(progress.totalMinutes)} ({progress.totalHours}h)</strong>
           </span>
         </div>
-        <div className="text-slate-400 text-[11px] flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-amber-500" />
-          <span>Bấm nút "Mục tiêu tuần" để tùy chỉnh số buổi và số tiếng mục tiêu.</span>
-        </div>
+        <span className="italic text-slate-400">
+          Click "Weekly Goals" in the sidebar to customize your hours and targets.
+        </span>
       </div>
     </div>
   )
 }
+
+export default WeeklyGoalTracker

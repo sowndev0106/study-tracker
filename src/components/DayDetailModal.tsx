@@ -1,7 +1,6 @@
 import React from 'react'
 import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
-import { X, Plus, Clock, Edit2, Trash2, BookOpen } from 'lucide-react'
+import { X, Plus, Clock, Edit2, Trash2, BookOpen, Sun, Moon } from 'lucide-react'
 import { StudyRecord, WeeklyTarget } from '../types'
 import { formatMinutes } from '../utils/helpers'
 
@@ -32,17 +31,47 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const dayRecords = records.filter(r => r.date === dateStr)
   const totalMinutes = dayRecords.reduce((acc, r) => acc + (r.durationMinutes || 0), 0)
 
-  const getSubjectColor = (subject: string): string => {
-    const found = targets.find(t => t.subject.toLowerCase() === subject.toLowerCase())
-    if (found) return found.color
-    if (subject.toLowerCase() === 'aws') return '#FF9900'
-    if (subject.toLowerCase() === 'golang') return '#00ADD8'
-    if (subject.toLowerCase() === 'leetcode') return '#FEA015'
+  const getRecordTimeOfDay = (rec: StudyRecord): 'morning' | 'evening' => {
+    if (rec.timeOfDay) return rec.timeOfDay === 'morning' ? 'morning' : 'evening'
+    if (rec.startTime) {
+      const h = parseInt(rec.startTime.split(':')[0], 10)
+      return h < 12 ? 'morning' : 'evening'
+    }
+    if (rec.createdAt) {
+      try {
+        return new Date(rec.createdAt).getHours() < 12 ? 'morning' : 'evening'
+      } catch {
+        return 'evening'
+      }
+    }
+    return 'evening'
+  }
+
+  const morningCount = dayRecords.filter(r => getRecordTimeOfDay(r) === 'morning').length
+  const eveningCount = dayRecords.filter(r => getRecordTimeOfDay(r) === 'evening').length
+
+  const getSubjectColor = (subject?: string, subjectName?: string): string => {
+    const s = (subject || '').trim().toLowerCase()
+    const sn = (subjectName || '').trim().toLowerCase()
+    const found = targets.find(t => {
+      const ts = (t.subject || '').trim().toLowerCase()
+      const tn = (t.name || '').trim().toLowerCase()
+      return (
+        (ts && (ts === s || ts === sn)) ||
+        (tn && (tn === s || tn === sn)) ||
+        (t.id && (t.id === subject || t.id === subjectName))
+      )
+    })
+    if (found?.color) return found.color
+    if (s.includes('aws') || sn.includes('aws') || s.includes('cloud') || sn.includes('cloud')) return '#FF9900'
+    if (s.includes('golang') || sn.includes('golang') || s.includes('go') || sn.includes('go')) return '#00ADD8'
+    if (s.includes('leetcode') || sn.includes('leetcode') || s.includes('algo') || sn.includes('algo')) return '#10B981'
+    if (s.includes('english') || sn.includes('english') || s.includes('ielts') || sn.includes('ielts')) return '#3B82F6'
     return '#6366F1'
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (window.confirm(`Bạn có chắc muốn xóa buổi học "${title || 'này'}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${title || 'this study session'}"?`)) {
       await onDeleteSession(id)
     }
   }
@@ -55,7 +84,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-base text-slate-900 capitalize">
-                {format(date, 'EEEE, dd/MM/yyyy', { locale: vi })}
+                {format(date, 'EEEE, MMMM d, yyyy')}
               </h3>
               {totalMinutes > 0 && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
@@ -64,24 +93,36 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {dayRecords.length === 0
-                ? 'Chưa có hoạt động học nào trong ngày'
-                : `Đã hoàn thành ${dayRecords.length} buổi học`}
-            </p>
+            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+              <span>{dayRecords.length === 0 ? 'No study sessions recorded' : `${dayRecords.length} session(s) completed`}</span>
+              {dayRecords.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
+                    <Sun className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    {morningCount} Morning
+                  </span>
+                  <span>•</span>
+                  <span className="inline-flex items-center gap-1 text-indigo-700 font-semibold">
+                    <Moon className="w-3 h-3 text-indigo-500 fill-indigo-500" />
+                    {eveningCount} Evening
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => onAddSession(date)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95 transition-all"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95 transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm buổi học</span>
+              <span>Add Session</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -95,66 +136,94 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                 <BookOpen className="w-6 h-6" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Ngày này chưa có ghi chép nào</p>
+              <p className="text-sm font-semibold text-slate-700">No study sessions logged for this day</p>
               <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                Bấm nút "Thêm buổi học" để lưu lại những gì bạn đã học hôm nay (AWS, Golang, LeetCode...).
+                Click "Add Session" to record what you studied (AWS, Golang, LeetCode, etc.).
               </p>
               <button
                 onClick={() => onAddSession(date)}
-                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Ghi nhận ngay</span>
+                <span>Log Session Now</span>
               </button>
             </div>
           ) : (
             dayRecords.map((record) => {
               const color = getSubjectColor(record.subject)
+              const isMorning = getRecordTimeOfDay(record) === 'morning'
+
               return (
                 <div
                   key={record.id}
                   className="rounded-xl border border-slate-200 p-4 bg-white shadow-2xs hover:shadow-xs transition-shadow"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Morning vs Evening Tag */}
+                      {isMorning ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
+                          <Sun className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span>Morning Session</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200/60">
+                          <Moon className="w-3 h-3 text-indigo-500 fill-indigo-500" />
+                          <span>Evening Session</span>
+                        </span>
+                      )}
+
+                      {/* Subject Tag */}
                       <span
                         className="px-2 py-0.5 rounded-md text-xs font-bold text-white shadow-2xs"
                         style={{ backgroundColor: color }}
                       >
                         {record.subjectName || record.subject.toUpperCase()}
                       </span>
+
+                      {/* Duration */}
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
                         <Clock className="w-3 h-3 text-slate-400" />
-                        {record.durationMinutes} phút
+                        {record.durationMinutes} mins ({formatMinutes(record.durationMinutes)})
                       </span>
+
+                      {record.startTime && (
+                        <span className="text-xs text-slate-400 font-mono">
+                          at {record.startTime}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onEditSession(record)}
-                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                        title="Chỉnh sửa"
+                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                        title="Edit session"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(record.id, record.title)}
-                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                        title="Xóa"
+                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                        title="Delete session"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
+                  {/* Title / Topic */}
                   <h4 className="font-bold text-sm text-slate-900 mt-2">
-                    {record.title || '(Chưa đặt tiêu đề)'}
+                    {record.title || '(Untitled session)'}
                   </h4>
 
-                  {record.notes && (
+                  {/* Detailed Notes */}
+                  {record.notes ? (
                     <div className="mt-2.5 p-3 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
                       {record.notes}
                     </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400 italic">No notes recorded for this session.</p>
                   )}
                 </div>
               )
@@ -166,12 +235,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-all"
+            className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-all cursor-pointer"
           >
-            Đóng
+            Close
           </button>
         </div>
       </div>
     </div>
   )
 }
+
+export default DayDetailModal

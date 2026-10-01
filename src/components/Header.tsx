@@ -1,99 +1,92 @@
 import React from 'react'
-import { Calendar, Download, Settings2, Plus, Database, Cloud } from 'lucide-react'
+import { Calendar, Download, Settings2, Plus, BarChart2 } from 'lucide-react'
 
 interface HeaderProps {
+  activeTab?: string
+  onSelectTab?: (tab: string) => void
   onOpenNewSession: () => void
   onOpenTargets: () => void
   onOpenExport: () => void
-  storageStatus: { status: string; storage: string; r2Bound: boolean }
+  storageStatus?: { status: string; storage: string; r2Bound: boolean }
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  activeTab = 'calendar',
+  onSelectTab,
   onOpenNewSession,
   onOpenTargets,
   onOpenExport,
-  storageStatus
+  storageStatus: _storageStatus
 }) => {
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm backdrop-blur-md bg-white/95">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
-        
-        {/* Brand Logo & Title */}
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-lg sm:text-xl text-slate-900 tracking-tight">
-                  Study Tracker Calendar
-                </h1>
-                <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  Cloudflare R2
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                <span>Daily Tracking & Weekly Targets</span>
-                <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 font-medium text-[11px] text-slate-600">
-                  {storageStatus.r2Bound ? (
-                    <>
-                      <Cloud className="w-3 h-3 text-sky-500" />
-                      <span className="text-emerald-600 font-semibold">R2 Connected</span>
-                    </>
-                  ) : (
-                    <>
-                      <Database className="w-3 h-3 text-amber-500" />
-                      <span className="text-amber-600">Local / Dev Storage</span>
-                    </>
-                  )}
-                </span>
-              </p>
-            </div>
+    <header className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 select-none z-20">
+      {/* Brand Logo & Title */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-xs shadow-blue-500/20 text-white">
+            <Calendar className="w-3.5 h-3.5" />
           </div>
-
-          {/* Quick Mobile Action */}
-          <button
-            onClick={onOpenNewSession}
-            className="sm:hidden p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-            title="Thêm buổi học"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+          <h1 className="font-extrabold text-sm sm:text-base text-slate-800 tracking-tight">
+            Study Tracker
+          </h1>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
-          {/* Target Config Button */}
+        {/* View Switcher: Calendar vs Analytics */}
+        <div className="hidden sm:flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold">
           <button
-            onClick={onOpenTargets}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all shadow-xs"
+            onClick={() => onSelectTab?.('calendar')}
+            className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'calendar'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
           >
-            <Settings2 className="w-3.5 h-3.5 text-slate-500" />
-            <span>Mục tiêu tuần</span>
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <span>Calendar</span>
           </button>
-
-          {/* Export / Backup Button */}
           <button
-            onClick={onOpenExport}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all shadow-xs"
+            onClick={() => onSelectTab?.('stats')}
+            className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'stats'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export & Backup</span>
-          </button>
-
-          {/* Primary Add Session Button */}
-          <button
-            onClick={onOpenNewSession}
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ Ghi nhận buổi học</span>
+            <BarChart2 className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Analytics</span>
           </button>
         </div>
+      </div>
 
+      {/* Action Controls */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onOpenTargets}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-2xs cursor-pointer"
+        >
+          <Settings2 className="w-3.5 h-3.5 text-slate-500" />
+          <span className="hidden sm:inline">Weekly Goals</span>
+        </button>
+
+        <button
+          onClick={onOpenExport}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-2xs cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5 text-slate-500" />
+          <span className="hidden sm:inline">Backup & Export</span>
+        </button>
+
+        <button
+          onClick={onOpenNewSession}
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Log Session</span>
+          <span className="sm:hidden">Log</span>
+        </button>
       </div>
     </header>
   )
 }
+
+export default Header

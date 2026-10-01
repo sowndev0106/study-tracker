@@ -99,14 +99,17 @@ export function fireCelebration() {
 }
 
 export function exportToCSV(records: StudyRecord[]): void {
-  const headers = ['ID', 'Date', 'Subject', 'Subject Name', 'Duration (Minutes)', 'Title / Topic', 'Notes', 'Completed', 'Created At']
+  const headers = ['ID', 'Date', 'Time of Day', 'Start Time', 'Subject', 'Subject Name', 'Duration (Minutes)', 'Duration (Formatted)', 'Title / Topic', 'Notes', 'Completed', 'Created At']
   
   const rows = records.map(r => [
     r.id,
     r.date,
+    r.timeOfDay || (new Date(r.createdAt).getHours() < 12 ? 'morning' : 'evening'),
+    r.startTime || '',
     r.subject,
     `"${(r.subjectName || '').replace(/"/g, '""')}"`,
     r.durationMinutes,
+    formatMinutes(r.durationMinutes),
     `"${(r.title || '').replace(/"/g, '""')}"`,
     `"${(r.notes || '').replace(/"/g, '""')}"`,
     r.completed ? 'Yes' : 'No',

@@ -33,14 +33,115 @@ export const DEFAULT_TARGETS: WeeklyTarget[] = [
   }
 ]
 
-export const DEFAULT_TOTAL_HOURS_TARGET = 6.0 // 6 tiếng / tuần
+export const DEFAULT_TOTAL_HOURS_TARGET = 6.0 // 6 hours / week
 
 const RECORDS_KEY = 'data/records.json'
 const TARGETS_KEY = 'data/targets.json'
 const SETTINGS_KEY = 'data/settings.json'
 
+export const DEFAULT_RECORDS: StudyRecord[] = [
+  {
+    id: 'demo-1',
+    date: '2026-10-01',
+    timeOfDay: 'morning',
+    startTime: '07:30',
+    subject: 'aws',
+    subjectName: 'AWS Cloud',
+    durationMinutes: 90,
+    title: 'S3 Presigned URLs & IAM Cross-Account Policies',
+    notes: '- Implemented presigned URLs with 15-minute expiration\n- Configured KMS key policy for SSE-KMS cross-account access\n- Reviewed CloudTrail data events for S3 GetObject',
+    completed: true,
+    createdAt: '2026-10-01T07:30:00.000Z',
+    updatedAt: '2026-10-01T07:30:00.000Z'
+  },
+  {
+    id: 'demo-2',
+    date: '2026-10-01',
+    timeOfDay: 'evening',
+    startTime: '20:00',
+    subject: 'golang',
+    subjectName: 'Golang',
+    durationMinutes: 60,
+    title: 'Concurrency: Select Channel Timeouts & Context',
+    notes: '- Built worker pool with buffered job queue\n- Avoided goroutine leaks using context.WithCancel()\n- Benchmarked channel communication vs sync.Mutex',
+    completed: true,
+    createdAt: '2026-10-01T20:00:00.000Z',
+    updatedAt: '2026-10-01T20:00:00.000Z'
+  },
+  {
+    id: 'demo-3',
+    date: '2026-09-30',
+    timeOfDay: 'morning',
+    startTime: '08:00',
+    subject: 'leetcode',
+    subjectName: 'LeetCode',
+    durationMinutes: 75,
+    title: 'Graph Traversal: LC 200 (Number of Islands)',
+    notes: '- Implemented BFS with queue and visited matrix\n- Also solved via DFS recursive flood fill (O(M*N))\n- Key takeaway: mutate grid in-place to save O(M*N) extra memory',
+    completed: true,
+    createdAt: '2026-09-30T08:00:00.000Z',
+    updatedAt: '2026-09-30T08:00:00.000Z'
+  },
+  {
+    id: 'demo-4',
+    date: '2026-09-30',
+    timeOfDay: 'evening',
+    startTime: '21:00',
+    subject: 'aws',
+    subjectName: 'AWS Cloud',
+    durationMinutes: 60,
+    title: 'DynamoDB Partition Keys & Global Secondary Indexes',
+    notes: '- Designed single-table schema with PK and SK composite keys\n- Added GSI for querying orders by customerId\n- Handled hot partition throttling with random suffixes',
+    completed: true,
+    createdAt: '2026-09-30T21:00:00.000Z',
+    updatedAt: '2026-09-30T21:00:00.000Z'
+  },
+  {
+    id: 'demo-5',
+    date: '2026-09-29',
+    timeOfDay: 'morning',
+    startTime: '07:00',
+    subject: 'golang',
+    subjectName: 'Golang',
+    durationMinutes: 90,
+    title: 'Interface Implementation & Memory Escape Analysis',
+    notes: '- Ran go build -gcflags="-m" to inspect heap allocations\n- Analyzed pointer receiver vs value receiver performance\n- Replaced slice appends with pre-allocated capacity make([]T, 0, n)',
+    completed: true,
+    createdAt: '2026-09-29T07:00:00.000Z',
+    updatedAt: '2026-09-29T07:00:00.000Z'
+  },
+  {
+    id: 'demo-6',
+    date: '2026-09-28',
+    timeOfDay: 'evening',
+    startTime: '19:30',
+    subject: 'leetcode',
+    subjectName: 'LeetCode',
+    durationMinutes: 60,
+    title: 'Dynamic Programming: LC 322 (Coin Change)',
+    notes: '- Set up bottom-up DP table dp[amount] initialized to amount+1\n- Recurrence: dp[i] = min(dp[i], dp[i-coin] + 1)\n- Solved LC 518 (Coin Change 2) combinations variation',
+    completed: true,
+    createdAt: '2026-09-28T19:30:00.000Z',
+    updatedAt: '2026-09-28T19:30:00.000Z'
+  },
+  {
+    id: 'demo-7',
+    date: '2026-09-27',
+    timeOfDay: 'morning',
+    startTime: '08:30',
+    subject: 'aws',
+    subjectName: 'AWS Cloud',
+    durationMinutes: 60,
+    title: 'VPC Peering vs Transit Gateway Routing Tables',
+    notes: '- Configured route table entries for CIDR 10.0.0.0/16\n- Set up Security Group ingress references to peer SG IDs\n- Noted non-transitive nature of standard VPC peering',
+    completed: true,
+    createdAt: '2026-09-27T08:30:00.000Z',
+    updatedAt: '2026-09-27T08:30:00.000Z'
+  }
+]
+
 // In-memory fallback if R2 is not configured yet (local mock)
-let memoryRecords: StudyRecord[] = []
+let memoryRecords: StudyRecord[] = [...DEFAULT_RECORDS]
 let memoryTargets: WeeklyTarget[] = [...DEFAULT_TARGETS]
 let memorySettings: { totalHoursTarget: number } = { totalHoursTarget: DEFAULT_TOTAL_HOURS_TARGET }
 
@@ -52,13 +153,20 @@ export async function getRecordsFromR2(bucket?: R2Bucket): Promise<StudyRecord[]
   try {
     const object = await bucket.get(RECORDS_KEY)
     if (!object) {
-      await bucket.put(RECORDS_KEY, JSON.stringify([], null, 2), {
+      await bucket.put(RECORDS_KEY, JSON.stringify(DEFAULT_RECORDS, null, 2), {
         httpMetadata: { contentType: 'application/json' }
       })
-      return []
+      return DEFAULT_RECORDS
     }
     const text = await object.text()
-    return JSON.parse(text) as StudyRecord[]
+    const parsed = JSON.parse(text) as StudyRecord[]
+    if (!parsed || parsed.length === 0) {
+      await bucket.put(RECORDS_KEY, JSON.stringify(DEFAULT_RECORDS, null, 2), {
+        httpMetadata: { contentType: 'application/json' }
+      })
+      return DEFAULT_RECORDS
+    }
+    return parsed
   } catch (err) {
     console.error('Error fetching records from R2:', err)
     return memoryRecords

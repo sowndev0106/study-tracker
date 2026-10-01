@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { X, Download, Upload, FileSpreadsheet, FileJson, CheckCircle2, AlertCircle, Database } from 'lucide-react'
+import { X, Download, Upload, FileSpreadsheet, FileJson, CheckCircle2, AlertCircle, Database, Sparkles } from 'lucide-react'
 import { StudyRecord, WeeklyTarget, AppDataExport } from '../types'
 import { exportToCSV, exportToJSONFile, formatMinutes } from '../utils/helpers'
 
@@ -43,6 +43,133 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     exportToCSV(records)
   }
 
+  const handleLoadDemoData = async () => {
+    setIsImporting(true)
+    setImportStatus({ type: null, message: '' })
+
+    try {
+      const demoData: AppDataExport = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        totalHoursTarget: 6.0,
+        targets,
+        records: [
+          {
+            id: `demo-${Date.now()}-1`,
+            date: '2026-10-01',
+            timeOfDay: 'morning',
+            startTime: '07:30',
+            subject: 'aws',
+            subjectName: 'AWS Cloud',
+            durationMinutes: 90,
+            title: 'S3 Presigned URLs & IAM Cross-Account Policies',
+            notes: '- Implemented presigned URLs with 15-minute expiration\n- Configured KMS key policy for SSE-KMS cross-account access\n- Reviewed CloudTrail data events for S3 GetObject',
+            completed: true,
+            createdAt: '2026-10-01T07:30:00.000Z',
+            updatedAt: '2026-10-01T07:30:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-2`,
+            date: '2026-10-01',
+            timeOfDay: 'evening',
+            startTime: '20:00',
+            subject: 'golang',
+            subjectName: 'Golang',
+            durationMinutes: 60,
+            title: 'Concurrency: Select Channel Timeouts & Context',
+            notes: '- Built worker pool with buffered job queue\n- Avoided goroutine leaks using context.WithCancel()\n- Benchmarked channel communication vs sync.Mutex',
+            completed: true,
+            createdAt: '2026-10-01T20:00:00.000Z',
+            updatedAt: '2026-10-01T20:00:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-3`,
+            date: '2026-09-30',
+            timeOfDay: 'morning',
+            startTime: '08:00',
+            subject: 'leetcode',
+            subjectName: 'LeetCode',
+            durationMinutes: 75,
+            title: 'Graph Traversal: LC 200 (Number of Islands)',
+            notes: '- Implemented BFS with queue and visited matrix\n- Also solved via DFS recursive flood fill (O(M*N))\n- Key takeaway: mutate grid in-place to save O(M*N) extra memory',
+            completed: true,
+            createdAt: '2026-09-30T08:00:00.000Z',
+            updatedAt: '2026-09-30T08:00:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-4`,
+            date: '2026-09-30',
+            timeOfDay: 'evening',
+            startTime: '21:00',
+            subject: 'aws',
+            subjectName: 'AWS Cloud',
+            durationMinutes: 60,
+            title: 'DynamoDB Partition Keys & Global Secondary Indexes',
+            notes: '- Designed single-table schema with PK and SK composite keys\n- Added GSI for querying orders by customerId\n- Handled hot partition throttling with random suffixes',
+            completed: true,
+            createdAt: '2026-09-30T21:00:00.000Z',
+            updatedAt: '2026-09-30T21:00:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-5`,
+            date: '2026-09-29',
+            timeOfDay: 'morning',
+            startTime: '07:00',
+            subject: 'golang',
+            subjectName: 'Golang',
+            durationMinutes: 90,
+            title: 'Interface Implementation & Memory Escape Analysis',
+            notes: '- Ran go build -gcflags="-m" to inspect heap allocations\n- Analyzed pointer receiver vs value receiver performance\n- Replaced slice appends with pre-allocated capacity make([]T, 0, n)',
+            completed: true,
+            createdAt: '2026-09-29T07:00:00.000Z',
+            updatedAt: '2026-09-29T07:00:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-6`,
+            date: '2026-09-28',
+            timeOfDay: 'evening',
+            startTime: '19:30',
+            subject: 'leetcode',
+            subjectName: 'LeetCode',
+            durationMinutes: 60,
+            title: 'Dynamic Programming: LC 322 (Coin Change)',
+            notes: '- Set up bottom-up DP table dp[amount] initialized to amount+1\n- Recurrence: dp[i] = min(dp[i], dp[i-coin] + 1)\n- Solved LC 518 (Coin Change 2) combinations variation',
+            completed: true,
+            createdAt: '2026-09-28T19:30:00.000Z',
+            updatedAt: '2026-09-28T19:30:00.000Z'
+          },
+          {
+            id: `demo-${Date.now()}-7`,
+            date: '2026-09-27',
+            timeOfDay: 'morning',
+            startTime: '08:30',
+            subject: 'aws',
+            subjectName: 'AWS Cloud',
+            durationMinutes: 60,
+            title: 'VPC Peering vs Transit Gateway Routing Tables',
+            notes: '- Configured route table entries for CIDR 10.0.0.0/16\n- Set up Security Group ingress references to peer SG IDs\n- Noted non-transitive nature of standard VPC peering',
+            completed: true,
+            createdAt: '2026-09-27T08:30:00.000Z',
+            updatedAt: '2026-09-27T08:30:00.000Z'
+          }
+        ]
+      }
+
+      const res = await onImportData(demoData)
+      setImportStatus({
+        type: 'success',
+        message: `Successfully loaded ${res.recordsCount} sample study sessions!`
+      })
+    } catch (err: any) {
+      setImportStatus({
+        type: 'error',
+        message: err.message || 'Error loading sample data.'
+      })
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -55,18 +182,18 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
       const parsed: AppDataExport = JSON.parse(text)
 
       if (!parsed.records || !Array.isArray(parsed.records)) {
-        throw new Error('Tệp không đúng định dạng. Cần có mảng records.')
+        throw new Error('Invalid file format. A "records" array is required.')
       }
 
       const res = await onImportData(parsed)
       setImportStatus({
         type: 'success',
-        message: `Đã khôi phục thành công ${res.recordsCount} buổi học!`
+        message: `Successfully restored ${res.recordsCount} study sessions!`
       })
     } catch (err: any) {
       setImportStatus({
         type: 'error',
-        message: err.message || 'Lỗi khi nhập dữ liệu. Vui lòng kiểm tra lại file JSON.'
+        message: err.message || 'Error importing data. Please check your JSON backup file.'
       })
     } finally {
       setIsImporting(false)
@@ -87,16 +214,16 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Xuất & Khôi phục dữ liệu
+                Backup & Export Data
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Sao lưu hoặc xuất bảng tính ra Excel / Sheets
+                Download your learning logs or export to Excel / Sheets
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -104,118 +231,147 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1">
-          {/* Quick stats box */}
-          <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+          {/* Quick Summary */}
+          <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
             <div>
-              <span className="text-slate-500">Tổng số buổi đã lưu:</span>
-              <p className="text-base font-bold text-slate-900 mt-0.5">{records.length} buổi</p>
+              <span className="text-slate-500">Total sessions recorded:</span>
+              <p className="text-base font-bold text-slate-900 mt-0.5">{records.length} sessions</p>
             </div>
             <div>
-              <span className="text-slate-500">Tổng thời gian học:</span>
+              <span className="text-slate-500">Total study time:</span>
               <p className="text-base font-bold text-blue-600 mt-0.5">{formatMinutes(totalMinutes)}</p>
             </div>
           </div>
 
-          {/* Export Section */}
+          {/* Export Options */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Tùy chọn Xuất dữ liệu (Export)
+              Export Options
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Export JSON */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* JSON Export */}
               <button
                 onClick={handleExportJSON}
-                className="p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-left transition-all group shadow-2xs"
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-all text-left flex flex-col justify-between group active:scale-98 cursor-pointer"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="p-1.5 rounded-md bg-blue-100 text-blue-600 group-hover:scale-105 transition-transform">
+                <div>
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                     <FileJson className="w-4 h-4" />
                   </div>
-                  <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  <h5 className="font-bold text-xs text-slate-900">JSON Backup</h5>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Full backup of all study sessions and weekly goals.
+                  </p>
                 </div>
-                <div className="font-bold text-xs text-slate-900">Export File JSON</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  Sao lưu toàn bộ dữ liệu & mục tiêu tuần (R2 backup).
+                <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-600">
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download .json</span>
                 </div>
               </button>
 
-              {/* Export CSV */}
+              {/* CSV Export */}
               <button
                 onClick={handleExportCSV}
-                className="p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-left transition-all group shadow-2xs"
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all text-left flex flex-col justify-between group active:scale-98 cursor-pointer"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="p-1.5 rounded-md bg-emerald-100 text-emerald-600 group-hover:scale-105 transition-transform">
+                <div>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                     <FileSpreadsheet className="w-4 h-4" />
                   </div>
-                  <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                  <h5 className="font-bold text-xs text-slate-900">CSV Spreadsheet</h5>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    For Microsoft Excel or Google Sheets analysis.
+                  </p>
                 </div>
-                <div className="font-bold text-xs text-slate-900">Export File CSV</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  Dành cho Microsoft Excel hoặc Google Sheets.
+                <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download .csv</span>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Import Section */}
-          <div className="space-y-2.5 pt-3 border-t border-slate-100">
+          {/* Import / Restore */}
+          <div className="space-y-2.5 pt-2 border-t border-slate-100">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Khôi phục từ tệp sao lưu (Import)
+              Restore from Backup (Import)
             </h4>
 
             <input
               type="file"
               ref={fileInputRef}
-              accept=".json"
               onChange={handleFileUpload}
+              accept=".json"
               className="hidden"
             />
 
-            <button
+            <div
               onClick={() => fileInputRef.current?.click()}
-              disabled={isImporting}
-              className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 rounded-xl text-center transition-all group flex flex-col items-center justify-center gap-1.5"
+              className="p-6 border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-slate-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all text-center"
             >
-              <div className="p-2 rounded-full bg-slate-100 group-hover:bg-blue-100 group-hover:text-blue-600 text-slate-500 transition-colors">
-                <Upload className="w-4 h-4" />
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mb-2">
+                <Upload className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600">
-                {isImporting ? 'Đang đọc dữ liệu...' : 'Chọn file JSON để khôi phục'}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Hỗ trợ tệp backup .json được xuất từ ứng dụng
-              </span>
-            </button>
+              <p className="text-xs font-bold text-slate-700">
+                {isImporting ? 'Reading backup data...' : 'Select JSON file to restore'}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Supports .json backup files exported from this application
+              </p>
+            </div>
 
             {/* Status alerts */}
             {importStatus.type === 'success' && (
-              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-xs text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{importStatus.message}</span>
               </div>
             )}
 
             {importStatus.type === 'error' && (
-              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-800">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>{importStatus.message}</span>
               </div>
             )}
           </div>
+
+          {/* Quick Demo Data Seeder */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Load Sample Study Records</span>
+              </h5>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Populate 7 realistic sessions (AWS, Golang, LeetCode) across morning and evening with real notes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLoadDemoData}
+              disabled={isImporting}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all active:scale-95 cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Load Sample Data</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <div className="p-4 sm:p-5 bg-slate-50/50 border-t border-slate-100 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-all"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
           >
-            Đóng
+            Close
           </button>
         </div>
       </div>
     </div>
   )
 }
+
+export default ExportImportModal

@@ -1,18 +1,35 @@
 import { StudyRecord, WeeklyTarget, AppDataExport } from '../types'
-import { DEFAULT_TARGETS, DEFAULT_TOTAL_HOURS_TARGET } from '../../worker/r2'
+import { DEFAULT_TARGETS, DEFAULT_TOTAL_HOURS_TARGET, DEFAULT_RECORDS } from '../../worker/r2'
+import { authHeaders, reportUnauthorized } from './auth'
 
 const API_BASE = '/api'
 const LOCAL_STORAGE_RECORDS = 'study_tracker_records_v1'
 const LOCAL_STORAGE_TARGETS = 'study_tracker_targets_v1'
 const LOCAL_STORAGE_SETTINGS = 'study_tracker_settings_v1'
 
+// Wraps fetch with the access token and flags the app to show the login screen on 401
+async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const res = await fetch(input, {
+    ...init,
+    headers: { ...authHeaders(), ...(init.headers || {}) }
+  })
+  if (res.status === 401) {
+    reportUnauthorized()
+  }
+  return res
+}
+
 // Helper for local storage backup/fallback
 function getLocalRecords(): StudyRecord[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_RECORDS)
-    return raw ? JSON.parse(raw) : []
+    if (raw) {
+      return JSON.parse(raw)
+    }
+    saveLocalRecords(DEFAULT_RECORDS)
+    return DEFAULT_RECORDS
   } catch {
-    return []
+    return DEFAULT_RECORDS
   }
 }
 
@@ -62,7 +79,7 @@ export const api = {
   // Check health and storage backend
   async checkHealth(): Promise<{ status: string; storage: string; r2Bound: boolean }> {
     try {
-      const res = await fetch(`${API_BASE}/health`)
+      const res = await apiFetch(`${API_BASE}/health`)
       if (!res.ok) throw new Error('Worker not responding')
       return await res.json()
     } catch {
@@ -77,7 +94,7 @@ export const api = {
   // Settings
   async getSettings(): Promise<{ totalHoursTarget: number }> {
     try {
-      const res = await fetch(`${API_BASE}/settings`)
+      const res = await apiFetch(`${API_BASE}/settings`)
       if (!res.ok) throw new Error('Failed to fetch settings')
       const settings = (await res.json()) as { totalHoursTarget: number }
       saveLocalSettings(settings)
@@ -91,7 +108,7 @@ export const api = {
   async updateSettings(settings: { totalHoursTarget: number }): Promise<{ totalHoursTarget: number }> {
     saveLocalSettings(settings)
     try {
-      const res = await fetch(`${API_BASE}/settings`, {
+      const res = await apiFetch(`${API_BASE}/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -106,7 +123,7 @@ export const api = {
   // Targets
   async getTargets(): Promise<WeeklyTarget[]> {
     try {
-      const res = await fetch(`${API_BASE}/targets`)
+      const res = await apiFetch(`${API_BASE}/targets`)
       if (!res.ok) throw new Error('Failed to fetch targets')
       const targets = (await res.json()) as WeeklyTarget[]
       saveLocalTargets(targets)
@@ -120,7 +137,7 @@ export const api = {
   async updateTargets(targets: WeeklyTarget[]): Promise<WeeklyTarget[]> {
     saveLocalTargets(targets)
     try {
-      const res = await fetch(`${API_BASE}/targets`, {
+      const res = await apiFetch(`${API_BASE}/targets`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(targets)
@@ -141,7 +158,7 @@ export const api = {
       if (params?.subject) query.set('subject', params.subject)
 
       const url = `${API_BASE}/records${query.toString() ? `?${query.toString()}` : ''}`
-      const res = await fetch(url)
+      const res = await apiFetch(url)
       if (!res.ok) throw new Error('Failed to fetch records')
       const records = (await res.json()) as StudyRecord[]
       if (!params || Object.keys(params).length === 0) {
@@ -166,7 +183,7 @@ export const api = {
 
   async createRecord(record: Omit<StudyRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<StudyRecord> {
     try {
-      const res = await fetch(`${API_BASE}/records`, {
+      const res = await apiFetch(`${API_BASE}/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(record)
@@ -196,7 +213,7 @@ export const api = {
 
   async updateRecord(id: string, updates: Partial<StudyRecord>): Promise<StudyRecord> {
     try {
-      const res = await fetch(`${API_BASE}/records/${id}`, {
+      const res = await apiFetch(`${API_BASE}/records/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -226,7 +243,7 @@ export const api = {
 
   async deleteRecord(id: string): Promise<boolean> {
     try {
-      const res = await fetch(`${API_BASE}/records/${id}`, {
+      const res = await apiFetch(`${API_BASE}/records/${id}`, {
         method: 'DELETE'
       })
       if (!res.ok) throw new Error('Failed to delete record')
@@ -241,7 +258,7 @@ export const api = {
   // Export full bundle
   async exportData(): Promise<AppDataExport> {
     try {
-      const res = await fetch(`${API_BASE}/export`)
+      const res = await apiFetch(`${API_BASE}/export`)
       if (!res.ok) throw new Error('Failed to export from server')
       return await res.json()
     } catch {
@@ -264,7 +281,7 @@ export const api = {
       saveLocalSettings({ totalHoursTarget: data.totalHoursTarget })
     }
     try {
-      const res = await fetch(`${API_BASE}/import`, {
+      const res = await apiFetch(`${API_BASE}/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

@@ -1,9 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tracking-calendar",
+  "name": "study-tracker",
   "main": "worker/index.ts",
   "compatibility_date": "2024-09-23",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "study-tracker.sowndev.com", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -12,8 +15,8 @@
   "r2_buckets": [
     {
       "binding": "TRACKING_BUCKET",
-      "bucket_name": "tracking-calendar-db",
-      "preview_bucket_name": "tracking-calendar-db-preview"
+      "bucket_name": "study-tracker-db",
+      "preview_bucket_name": "study-tracker-db-preview"
     }
   ],
   "observability": {
