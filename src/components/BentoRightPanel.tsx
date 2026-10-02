@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react'
-import { Flame, Target, Plus, ChevronRight, ChevronLeft, ChevronDown, Award, ShieldCheck, Sun, Moon, Check, Clock } from 'lucide-react'
+import { Flame, Target, Plus, ChevronRight, ChevronLeft, Award, Sun, Moon, Check, Zap } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget, StudyRecord } from '../types'
-import { formatMinutes } from '../utils/helpers'
-import { format, isSameMonth, parseISO, subDays, differenceInCalendarDays, addWeeks, subWeeks } from 'date-fns'
+import { getWeekBounds } from '../utils/helpers'
+import { format, isSameMonth, parseISO, subDays, differenceInCalendarDays, addWeeks, subWeeks, addDays, isSameDay } from 'date-fns'
 
 interface BentoRightPanelProps {
   weekProgress: WeekProgressSummary
@@ -133,9 +133,6 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
 
   const monthCompletedSubjectsCount = monthSubjectProgress.filter(t => t.isCompleted).length
 
-  // Latest record
-  const latestRecord = records.length > 0 ? records[0] : null
-
   // Progress percentage
   const hoursPercent = Math.min(
     100,
@@ -147,6 +144,57 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
     weekProgress.targets.length > 0 &&
     weekProgress.targets.every(t => t.isCompleted) &&
     isWeeklyHoursCompleted
+
+  // Today's Target Pace: always anchored to the real current week/day,
+  // independent of whichever week the "Weekly Goal" card is browsing to.
+  const todayDate = new Date()
+  const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+  const paceDays = useMemo(() => {
+    const { start: realWeekStart } = getWeekBounds(todayDate)
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(realWeekStart, i)
+      const dayStr = format(day, 'yyyy-MM-dd')
+      const minutes = records
+        .filter(r => r.date === dayStr && r.completed)
+        .reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+      return {
+        label: WEEKDAY_LABELS[i],
+        hours: Math.round((minutes / 60) * 10) / 10,
+        isToday: isSameDay(day, todayDate),
+        isFuture: day > todayDate && !isSameDay(day, todayDate)
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    })
+  }, [records])
+
+  const maxPaceHours = Math.max(0.5, ...paceDays.map(d => d.hours))
+  const todayPace = paceDays.find(d => d.isToday)
+  const hoursLoggedToday = todayPace?.hours || 0
+  const hoursLoggedBeforeToday = paceDays
+    .filter(d => !d.isToday && !d.isFuture)
+    .reduce((sum, d) => sum + d.hours, 0)
+  const remainingDaysInWeek = paceDays.filter(d => d.isToday || d.isFuture).length || 1
+  const idealPaceToday = Math.max(0, effectiveWeeklyTarget - hoursLoggedBeforeToday) / remainingDaysInWeek
+  const hoursNeededToday = Math.max(0, Math.round((idealPaceToday - hoursLoggedToday) * 10) / 10)
+
+  // Sessions still outstanding this (real, current) week across all subject targets
+  const remainingSessionsThisWeek = useMemo(() => {
+    const { start: realWeekStart, end: realWeekEnd } = getWeekBounds(todayDate)
+    return targets.reduce((sum, t) => {
+      const done = records.filter(r => {
+        if (r.subject.toLowerCase() !== t.subject.toLowerCase() || !r.completed) return false
+        try {
+          const rDate = parseISO(r.date)
+          return rDate >= realWeekStart && rDate <= realWeekEnd
+        } catch {
+          return false
+        }
+      }).length
+      return sum + Math.max(0, t.targetSessionsPerWeek - done)
+    }, 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, targets])
 
   return (
     <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
@@ -386,6 +434,73 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             })}
           </div>
         )}
+      </div>
+
+      {/* Bento Card: Today's Target Pace */}
+      <div className="shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+            <span>Today's Target Pace</span>
+          </div>
+          {hoursNeededToday > 0 ? (
+            <span className="text-xs font-extrabold text-emerald-600">{hoursNeededToday}h needed today</span>
+          ) : (
+            <span className="text-xs font-extrabold text-emerald-600 inline-flex items-center gap-1">
+              <Check className="w-3 h-3 stroke-[3]" /> On pace
+            </span>
+          )}
+        </div>
+
+        {/* Mini 7-day bar chart, today highlighted */}
+        <div className="flex items-end justify-between gap-1.5 h-9 px-0.5">
+          {paceDays.map((d, idx) => {
+            const barPct = Math.max(8, Math.round((d.hours / maxPaceHours) * 100))
+            return (
+              <div
+                key={idx}
+                className={`flex-1 h-full rounded-lg flex items-end justify-center ${
+                  d.isToday ? 'bg-blue-50 ring-1 ring-blue-200' : ''
+                }`}
+                title={`${d.label}: ${d.hours}h`}
+              >
+                <div
+                  className={`w-2 rounded-full transition-all duration-300 ${
+                    d.isToday
+                      ? 'bg-blue-400'
+                      : d.isFuture
+                      ? 'bg-slate-100'
+                      : d.hours > 0
+                      ? 'bg-blue-600'
+                      : 'bg-slate-100'
+                  }`}
+                  style={{ height: d.hours > 0 || d.isToday ? `${barPct}%` : '4px' }}
+                />
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex items-center justify-between -mt-1">
+          {paceDays.map((d, idx) => (
+            <span
+              key={idx}
+              className={`flex-1 text-center text-[10px] font-semibold ${
+                d.isToday ? 'text-blue-600 font-black' : 'text-slate-400'
+              }`}
+            >
+              {d.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+          <span className="text-slate-500 font-medium">
+            <strong className="text-slate-800 font-bold">{format(todayDate, 'EEEE')}</strong>: Today
+          </span>
+          <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60">
+            Target: {remainingSessionsThisWeek} session{remainingSessionsThisWeek === 1 ? '' : 's'}
+          </span>
+        </div>
       </div>
 
       {/* Bento Card 3: Subject Breakdown with Week / Month Toggle (Fixed height h-[210px]) */}

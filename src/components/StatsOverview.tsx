@@ -19,9 +19,7 @@ import {
   Sparkles,
   Target,
   CheckCircle2,
-  AlertCircle,
   Trophy,
-  Filter,
   Check
 } from 'lucide-react'
 import {
