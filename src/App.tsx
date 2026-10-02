@@ -173,15 +173,17 @@ export const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F8F9FB] text-slate-800 antialiased font-sans">
-      {/* Slim Header (48px) */}
-      <Header
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        onOpenNewSession={() => handleOpenNewSession()}
-        onOpenTargets={() => setTargetModalOpen(true)}
-        onOpenExport={() => setExportModalOpen(true)}
-        storageStatus={storageStatus}
-      />
+      {/* Slim Header - Mobile Only (Hidden on Desktop) */}
+      <div className="md:hidden">
+        <Header
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onOpenNewSession={() => handleOpenNewSession()}
+          onOpenTargets={() => setTargetModalOpen(true)}
+          onOpenExport={() => setExportModalOpen(true)}
+          storageStatus={storageStatus}
+        />
+      </div>
 
       {/* Main Single-Screen Workspace */}
       <main className="flex-1 min-h-0 flex gap-2 sm:gap-3.5 p-2 sm:p-3.5 pb-20 md:pb-3.5 overflow-hidden">

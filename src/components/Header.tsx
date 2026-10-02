@@ -13,7 +13,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = () => {
 
   return (
-    <header className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 select-none z-20">
+    <header className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex md:hidden items-center justify-between shrink-0 select-none z-20">
       {/* Brand Logo & Title */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-xs shadow-blue-500/20 text-white">

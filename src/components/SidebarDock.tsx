@@ -1,5 +1,5 @@
 import React from 'react'
-import { Calendar, Target, BarChart2, Cloud, Database, Download, Settings2 } from 'lucide-react'
+import { Calendar, Target, BarChart2, Cloud, Database, Download, Settings2, GraduationCap } from 'lucide-react'
 
 interface SidebarDockProps {
   activeTab?: string
@@ -18,8 +18,19 @@ export const SidebarDock: React.FC<SidebarDockProps> = ({
 }) => {
   return (
     <aside className="w-14 h-full rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-between py-3.5 shrink-0 select-none">
-      {/* Top Nav Buttons */}
-      <div className="flex flex-col items-center gap-2.5">
+      {/* Top Nav Buttons & App Logo */}
+      <div className="flex flex-col items-center gap-2">
+        {/* App Brand Logo */}
+        <button
+          onClick={() => onSelectTab?.('calendar')}
+          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm shadow-blue-500/25 text-white hover:scale-105 active:scale-95 transition-all cursor-pointer mb-0.5"
+          title="Study Tracker"
+        >
+          <GraduationCap className="w-5 h-5 text-white" />
+        </button>
+
+        <div className="w-6 h-[1px] bg-slate-200/80 mb-0.5" />
+
         {/* Calendar Nav */}
         <button
           onClick={() => onSelectTab?.('calendar')}
