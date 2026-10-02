@@ -204,9 +204,9 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
       : `${weekProgress.totalSessions} sessions logged`
 
   return (
-    <div className="w-full md:w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
+    <div className="w-full md:w-[330px] xl:w-[350px] shrink-0 h-auto md:h-full flex flex-col justify-between overflow-visible md:overflow-hidden select-none">
       {/* Scrollable Upper Cards Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 scrollbar-none">
+      <div className="flex-1 min-h-0 overflow-visible md:overflow-y-auto pr-0 md:pr-0.5 space-y-2.5 scrollbar-none pb-0">
         {/* Bento Card 1: DEDICATED MONTHLY TARGET CARD WITH EXPANDABLE SUBJECT MINI RINGS */}
       <div className="shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white border border-indigo-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2.5">
         {/* Top: Monthly Overview & Overall Progress Ring */}
@@ -621,10 +621,44 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
           <span className="text-slate-600 font-semibold">{sessionsTargetSubtitle}</span>
         </div>
       </div>
+        {/* Mobile-only Month Activity & Quick Log (Inside scroll container) */}
+        <div className="md:hidden shrink-0 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/80 shadow-xs p-3 flex flex-col justify-between gap-2.5 bg-white">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+              {format(currentMonth, 'MMMM')} Activity
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 text-[10px] font-extrabold flex items-center gap-1">
+              <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+              {streakDays > 0 ? `${streakDays}-day streak` : 'Start streak'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>{totalSessionsMonth} sessions</span>
+            <span>•</span>
+            <span className="inline-flex items-center gap-0.5 text-amber-700 font-semibold">
+              <Sun className="w-3 h-3 text-amber-500 fill-amber-500" />
+              {morningMonthCount} AM
+            </span>
+            <span>•</span>
+            <span className="inline-flex items-center gap-0.5 text-indigo-700 font-semibold">
+              <Moon className="w-3 h-3 text-indigo-500 fill-indigo-500" />
+              {eveningMonthCount} PM
+            </span>
+          </div>
+
+          <button
+            onClick={onOpenNewSession}
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Log Study Session</span>
+          </button>
+        </div>
       </div>
 
-      {/* Pinned Bottom Card: Month Activity & Quick Log (Always pinned at bottom) */}
-      <div className="shrink-0 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/80 shadow-xs p-3 flex flex-col justify-between gap-2.5 bg-white mt-1">
+      {/* Pinned Bottom Card (Desktop only): Month Activity & Quick Log */}
+      <div className="hidden md:flex shrink-0 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/80 shadow-xs p-3 flex flex-col justify-between gap-2.5 bg-white mt-1">
         <div className="flex justify-between items-center">
           <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
             {format(currentMonth, 'MMMM')} Activity

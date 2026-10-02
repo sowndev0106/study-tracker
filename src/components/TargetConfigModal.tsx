@@ -111,8 +111,8 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
           {/* TOTAL HOURS SUMMARY - AUTO-CALCULATED FROM SUBJECTS BELOW */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/80 shadow-2xs space-y-1">
-            <div className="flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/80 shadow-2xs space-y-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
                   <Target className="w-4 h-4 text-blue-600" />
@@ -123,7 +123,7 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <div className="text-base font-black text-blue-700">
                   {calculatedWeeklyHours} hrs / week
                 </div>
