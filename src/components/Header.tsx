@@ -1,4 +1,5 @@
-import { Calendar, Download, Settings2, Plus, BarChart2, Sparkles } from 'lucide-react'
+import React from 'react'
+import { Calendar, Download, Settings2, Plus, BarChart2 } from 'lucide-react'
 
 interface HeaderProps {
   activeTab?: string
@@ -59,17 +60,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Action Controls */}
       <div className="flex items-center gap-2">
-        <a
-          href="/preview.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 active:scale-95 transition-all shadow-2xs cursor-pointer"
-          title="Xem và chọn Top 5 Bento Design Options"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-          <span className="hidden sm:inline">Top 5 Designs</span>
-        </a>
-
         <button
           onClick={onOpenTargets}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-2xs cursor-pointer"
