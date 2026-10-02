@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { Flame, Target, Plus, ChevronRight, ChevronLeft, Award, Sun, Moon, Check } from 'lucide-react'
+import { Flame, Target, Plus, ChevronRight, ChevronLeft, Award, Sun, Moon, Check, Zap } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget, StudyRecord } from '../types'
-import { format, isSameMonth, parseISO, subDays, differenceInCalendarDays, addWeeks, subWeeks } from 'date-fns'
+import { format, isSameMonth, parseISO, subDays, differenceInCalendarDays, addWeeks, subWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns'
 
 interface BentoRightPanelProps {
   weekProgress: WeekProgressSummary
@@ -143,6 +143,65 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
     weekProgress.targets.length > 0 &&
     weekProgress.targets.every(t => t.isCompleted) &&
     isWeeklyHoursCompleted
+
+  // 7-day bar chart & pacing
+  const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 })
+  const weekEnd = endOfWeek(referenceDate, { weekStartsOn: 1 })
+  const weekDays = useMemo(() => eachDayOfInterval({ start: weekStart, end: weekEnd }), [referenceDate])
+  const today = new Date()
+  const isCurrentWeek = isSameDay(weekStart, startOfWeek(today, { weekStartsOn: 1 }))
+
+  const dailyStudyStats = useMemo(() => {
+    return weekDays.map((day) => {
+      const dayStr = format(day, 'yyyy-MM-dd')
+      const dayRecords = records.filter(r => r.date === dayStr)
+      const dayMinutes = dayRecords.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+      const dayHours = Math.round((dayMinutes / 60) * 10) / 10
+      const isDayToday = isSameDay(day, today)
+      return {
+        date: day,
+        dayLetter: format(day, 'EEEEE'), // 'M', 'T', 'W', 'T', 'F', 'S', 'S'
+        hours: dayHours,
+        isToday: isDayToday,
+        sessionsCount: dayRecords.length
+      }
+    })
+  }, [records, weekDays])
+
+  const maxDailyHours = Math.max(2.0, ...dailyStudyStats.map(d => d.hours))
+
+  // Calculate remaining hours and days
+  const remainingWeekHours = Math.max(0, Math.round((effectiveWeeklyTarget - weekProgress.totalHours) * 10) / 10)
+  const todayIndex = dailyStudyStats.findIndex(d => d.isToday)
+  const remainingDays = isCurrentWeek && todayIndex !== -1 ? Math.max(1, 7 - todayIndex) : 7
+  const neededToday = Math.round((remainingWeekHours / remainingDays) * 10) / 10
+
+  const todayStats = dailyStudyStats.find(d => d.isToday)
+  const todayHours = todayStats ? todayStats.hours : 0
+
+  let paceBadgeText = `${neededToday}h needed today`
+  if (!isCurrentWeek) {
+    paceBadgeText = `${weekProgress.totalHours}h / ${effectiveWeeklyTarget}h`
+  } else if (remainingWeekHours === 0) {
+    paceBadgeText = '🎉 Goal Met!'
+  } else if (todayHours >= neededToday && neededToday > 0) {
+    paceBadgeText = `✨ Pace Met (${todayHours}h)`
+  }
+
+  // Calculate session targets
+  const totalTargetSessions = targets.reduce((sum, t) => sum + (t.targetSessionsPerWeek || 0), 0)
+  const remainingSessions = Math.max(0, totalTargetSessions - weekProgress.totalSessions)
+  const neededSessionsToday = Math.max(1, Math.ceil(remainingSessions / remainingDays))
+
+  const todaySubtitle = isCurrentWeek 
+    ? `${format(today, 'EEEE')}: Today`
+    : `Week ${weekProgress.weekNumber} Overview`
+
+  const sessionsTargetSubtitle = remainingWeekHours === 0
+    ? 'All targets reached'
+    : isCurrentWeek
+      ? `Target: ${neededSessionsToday} session${neededSessionsToday > 1 ? 's' : ''}`
+      : `${weekProgress.totalSessions} sessions logged`
 
   return (
     <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
@@ -512,6 +571,54 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
               ? `${weekProgress.targets.filter(t => t.isCompleted).length}/${weekProgress.targets.length} completed`
               : `${monthCompletedSubjectsCount}/${targets.length} completed`}
           </span>
+        </div>
+      </div>
+
+      {/* Bento Card 4: Today's Target Pace & 7-Day Mini Bar Chart */}
+      <div className="shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2 select-none">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+            <span>Today's Target Pace</span>
+          </span>
+          <span className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded shadow-2xs">
+            {paceBadgeText}
+          </span>
+        </div>
+
+        {/* 7-Day Mini Bar Chart */}
+        <div className="flex items-end justify-between gap-1.5 pt-1.5 h-16 border-b border-slate-100 pb-2">
+          {dailyStudyStats.map((d, idx) => (
+            <div
+              key={idx}
+              className="flex-1 flex flex-col items-center gap-1 min-w-0"
+              title={`${format(d.date, 'EEEE, dd/MM')}: ${d.hours}h (${d.sessionsCount} session${d.sessionsCount !== 1 ? 's' : ''})`}
+            >
+              <div className="w-full flex items-end justify-center h-10">
+                {d.hours > 0 ? (
+                  <div
+                    className={`w-full rounded-t transition-all duration-300 ${
+                      d.isToday ? 'bg-blue-600 ring-2 ring-blue-300' : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
+                    style={{ height: `${Math.max(20, Math.min(100, Math.round((d.hours / maxDailyHours) * 100)))}%` }}
+                  />
+                ) : d.isToday ? (
+                  <div className="w-full h-8 rounded-t bg-blue-100/70 border border-blue-400/80 border-dashed animate-pulse" />
+                ) : (
+                  <div className="w-full h-1 bg-slate-200/70 rounded-full" />
+                )}
+              </div>
+              <span className={`text-[10px] ${d.isToday ? 'font-black text-blue-600' : 'font-bold text-slate-400'}`}>
+                {d.dayLetter}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom helper text */}
+        <div className="text-[10px] text-slate-500 flex items-center justify-between font-medium pt-0.5">
+          <span>{todaySubtitle}</span>
+          <span className="text-slate-600 font-semibold">{sessionsTargetSubtitle}</span>
         </div>
       </div>
       </div>
