@@ -53,38 +53,34 @@ async function run() {
   console.log('Navigating to http://localhost:5173...');
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
 
-  // Wait for the monthly goal text to be visible
   await page.waitForSelector('text=Goal', { timeout: 10000 });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(600);
 
-  console.log('Taking desktop full screenshot...');
-  await page.screenshot({ path: './screenshots/desktop-full.png', fullPage: true });
+  console.log('Taking desktop full screenshot (collapsed by default)...');
+  await page.screenshot({ path: './screenshots/desktop-collapsed.png' });
 
-  const monthlyCard = await page.locator('text=Goal').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').first();
-  if (monthlyCard) {
-    console.log('Taking monthly card screenshot...');
-    await monthlyCard.screenshot({ path: './screenshots/monthly-card.png' });
+  // Take screenshot of header
+  const header = page.locator('header');
+  if (await header.isVisible()) {
+    console.log('Taking header screenshot...');
+    await header.screenshot({ path: './screenshots/header-minimal.png' });
   }
 
-  // Mobile testing
-  console.log('Testing mobile view...');
-  const mobilePage = await context.newPage();
-  await mobilePage.setViewportSize({ width: 390, height: 844 });
-  await mobilePage.goto('http://localhost:5173', { waitUntil: 'networkidle' });
-  await mobilePage.waitForTimeout(500);
+  // Click Month "Details"
+  console.log('Expanding Month details...');
+  const monthDetailBtn = page.locator('text=October 2026 Goal').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').locator('button:has-text("Details")');
+  await monthDetailBtn.click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: './screenshots/desktop-month-expanded.png' });
 
-  console.log('Taking mobile calendar view screenshot...');
-  await mobilePage.screenshot({ path: './screenshots/mobile-full.png' });
+  // Click Week "Details"
+  console.log('Expanding Week details...');
+  const weekDetailBtn = page.locator('text=Week').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').locator('button:has-text("Details")');
+  await weekDetailBtn.click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: './screenshots/desktop-both-expanded.png' });
 
-  // Switch to mobile Goals tab
-  console.log('Clicking mobile Goals nav button...');
-  await mobilePage.locator('nav button').filter({ hasText: 'Goals' }).click();
-  await mobilePage.waitForTimeout(500);
-
-  console.log('Taking mobile goals tab screenshot...');
-  await mobilePage.screenshot({ path: './screenshots/mobile-goals.png' });
-
-  console.log('All screenshots captured successfully!');
+  console.log('All tests completed successfully!');
   await browser.close();
 }
 

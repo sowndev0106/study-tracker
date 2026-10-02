@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Flame, Target, Plus, ChevronRight, ChevronLeft, Award, ShieldCheck, Sun, Moon, Check, Clock } from 'lucide-react'
+import { Flame, Target, Plus, ChevronRight, ChevronLeft, ChevronDown, Award, ShieldCheck, Sun, Moon, Check, Clock } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget, StudyRecord } from '../types'
 import { formatMinutes } from '../utils/helpers'
 import { format, isSameMonth, parseISO, subDays, differenceInCalendarDays, addWeeks, subWeeks } from 'date-fns'
@@ -28,6 +28,8 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
   storageStatus: _storageStatus
 }) => {
   const [subjectViewMode, setSubjectViewMode] = useState<'week' | 'month'>('week')
+  const [showMonthDetail, setShowMonthDetail] = useState(false)
+  const [showWeekDetail, setShowWeekDetail] = useState(false)
   // Helper to determine Morning vs Evening for any record
   const getRecordTimeOfDay = (rec: StudyRecord): 'morning' | 'evening' => {
     if (rec.timeOfDay) return rec.timeOfDay === 'morning' ? 'morning' : 'evening'
@@ -150,8 +152,8 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
     <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
       {/* Scrollable Upper Cards Area */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 scrollbar-none">
-        {/* Bento Card 1: DEDICATED MONTHLY TARGET CARD WITH SUBJECT MINI RINGS */}
-      <div className="shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white border border-indigo-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2.5">
+        {/* Bento Card 1: DEDICATED MONTHLY TARGET CARD WITH EXPANDABLE SUBJECT MINI RINGS */}
+      <div className="shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white border border-indigo-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2">
         {/* Top: Monthly Overview & Overall Progress Ring */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
@@ -201,120 +203,198 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
           </div>
         </div>
 
-        {/* Bottom: Subtle Subject Monthly Target Mini Rings */}
-        <div className="pt-2 border-t border-indigo-100/70 grid grid-cols-4 gap-1 text-center">
-          {monthSubjectProgress.map((s) => (
-            <div key={s.target.id} className="flex flex-col items-center group cursor-default min-w-0">
-              {/* Mini Ring Gauge */}
-              <div className="relative w-8 h-8 min-w-[32px] min-h-[32px] max-w-[32px] max-h-[32px] shrink-0 flex items-center justify-center mb-0.5">
-                <svg className="w-8 h-8 -rotate-90 shrink-0" viewBox="0 0 36 36">
-                  <path
-                    className="text-slate-200/70"
-                    strokeWidth="3.5"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    style={{ color: s.target.color }}
-                    className="transition-all duration-500 ease-out"
-                    strokeDasharray={`${s.pct}, 100`}
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute text-[8px] font-black text-slate-700">
-                  {s.isCompleted ? (
-                    <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
-                  ) : (
-                    `${s.pct}%`
-                  )}
-                </div>
-              </div>
-
-              {/* Subject Short Name */}
-              <span className="text-[10px] font-bold text-slate-700 truncate w-full px-0.5" title={s.target.name}>
-                {s.target.name}
-              </span>
-
-              {/* Monthly Target Hours */}
-              <span className="text-[9px] font-mono text-slate-500">
-                {s.actualHours}/{s.targetHours}h
-              </span>
-            </div>
-          ))}
+        {/* Detail Toggle Action */}
+        <div className="flex items-center justify-end pt-0.5">
+          <button
+            onClick={() => setShowMonthDetail(v => !v)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer select-none"
+            title={showMonthDetail ? "Hide subject details" : "Show subject details"}
+          >
+            <span>{showMonthDetail ? 'Hide details' : 'Details'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showMonthDetail ? 'rotate-180' : ''}`} />
+          </button>
         </div>
+
+        {/* Bottom: Subtle Subject Monthly Target Mini Rings (Expandable) */}
+        {showMonthDetail && (
+          <div className="pt-2 border-t border-indigo-100/70 grid grid-cols-4 gap-1 text-center">
+            {monthSubjectProgress.map((s) => (
+              <div key={s.target.id} className="flex flex-col items-center group cursor-default min-w-0">
+                {/* Mini Ring Gauge */}
+                <div className="relative w-8 h-8 min-w-[32px] min-h-[32px] max-w-[32px] max-h-[32px] shrink-0 flex items-center justify-center mb-0.5">
+                  <svg className="w-8 h-8 -rotate-90 shrink-0" viewBox="0 0 36 36">
+                    <path
+                      className="text-slate-200/70"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      style={{ color: s.target.color }}
+                      className="transition-all duration-500 ease-out"
+                      strokeDasharray={`${s.pct}, 100`}
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute text-[8px] font-black text-slate-700">
+                    {s.isCompleted ? (
+                      <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                    ) : (
+                      `${s.pct}%`
+                    )}
+                  </div>
+                </div>
+
+                {/* Subject Short Name */}
+                <span className="text-[10px] font-bold text-slate-700 truncate w-full px-0.5" title={s.target.name}>
+                  {s.target.name}
+                </span>
+
+                {/* Monthly Target Hours */}
+                <span className="text-[9px] font-mono text-slate-500">
+                  {s.actualHours}/{s.targetHours}h
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Bento Card 2: Weekly Goal (Fixed height h-[110px]) */}
-      <div className="h-[110px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex items-center justify-between">
-        <div className="flex flex-col justify-center">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span>Week {weekProgress.weekNumber}</span>
+      {/* Bento Card 2: Weekly Goal with Expandable Subject Mini Rings */}
+      <div className="shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                <span>Week {weekProgress.weekNumber}</span>
+              </div>
+              <div className="flex items-center border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                <button
+                  onClick={() => onChangeReferenceDate(subWeeks(referenceDate, 1))}
+                  className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
+                  title="Previous week"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <div className="w-[1px] h-3 bg-slate-200"></div>
+                <button
+                  onClick={() => onChangeReferenceDate(addWeeks(referenceDate, 1))}
+                  className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
+                  title="Next week"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-              <button
-                onClick={() => onChangeReferenceDate(subWeeks(referenceDate, 1))}
-                className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
-                title="Previous week"
-              >
-                <ChevronLeft className="w-3 h-3" />
-              </button>
-              <div className="w-[1px] h-3 bg-slate-200"></div>
-              <button
-                onClick={() => onChangeReferenceDate(addWeeks(referenceDate, 1))}
-                className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
-                title="Next week"
-              >
-                <ChevronRight className="w-3 h-3" />
-              </button>
+
+            <div className="text-2xl font-black text-slate-900 mt-0.5">
+              {weekProgress.totalHours} <span className="text-sm font-semibold text-slate-400">/ {effectiveWeeklyTarget}h</span>
+            </div>
+
+            <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-emerald-600 truncate">
+              {isAllTargetsCompleted ? (
+                <span className="inline-flex items-center gap-1">
+                  <Award className="w-3 h-3 text-emerald-600 shrink-0" /> 100% Goal Reached!
+                </span>
+              ) : (
+                <span>● {hoursPercent}% of weekly plan</span>
+              )}
             </div>
           </div>
 
-          <div className="text-2xl font-black text-slate-900 mt-0.5">
-            {weekProgress.totalHours} <span className="text-sm font-semibold text-slate-400">/ {effectiveWeeklyTarget}h</span>
-          </div>
-
-          <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-emerald-600">
-            {isAllTargetsCompleted ? (
-              <span className="inline-flex items-center gap-1">
-                <Award className="w-3 h-3 text-emerald-600" /> 100% Goal Reached!
-              </span>
-            ) : (
-              <span>● {hoursPercent}% of weekly plan</span>
-            )}
+          {/* Circular Progress Gauge */}
+          <div className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center">
+            <svg className="w-12 h-12 -rotate-90 shrink-0" viewBox="0 0 36 36">
+              <path
+                className="text-slate-100"
+                strokeWidth="3.5"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className="text-blue-600 transition-all duration-500 ease-out"
+                strokeDasharray={`${hoursPercent}, 100`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <div className="absolute text-[11px] font-black text-slate-700">
+              {hoursPercent}%
+            </div>
           </div>
         </div>
 
-        {/* Circular Progress Gauge */}
-        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <path
-              className="text-slate-100"
-              strokeWidth="3.5"
-              stroke="currentColor"
-              fill="none"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-            <path
-              className="text-blue-600 transition-all duration-500 ease-out"
-              strokeDasharray={`${hoursPercent}, 100`}
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              stroke="currentColor"
-              fill="none"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-          </svg>
-          <div className="absolute text-[11px] font-black text-slate-700">
-            {hoursPercent}%
-          </div>
+        {/* Detail Toggle Action */}
+        <div className="flex items-center justify-end pt-0.5">
+          <button
+            onClick={() => setShowWeekDetail(v => !v)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer select-none"
+            title={showWeekDetail ? "Hide subject details" : "Show subject details"}
+          >
+            <span>{showWeekDetail ? 'Hide details' : 'Details'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showWeekDetail ? 'rotate-180' : ''}`} />
+          </button>
         </div>
+
+        {/* Bottom: Subtle Subject Weekly Target Mini Rings (Expandable) */}
+        {showWeekDetail && (
+          <div className="pt-2 border-t border-slate-100 grid grid-cols-4 gap-1 text-center">
+            {weekProgress.targets.map((t) => {
+              const pct = Math.min(100, Math.round((t.actualHours / (t.targetHours || 1)) * 100))
+              return (
+                <div key={t.id} className="flex flex-col items-center group cursor-default min-w-0">
+                  {/* Mini Ring Gauge */}
+                  <div className="relative w-8 h-8 min-w-[32px] min-h-[32px] max-w-[32px] max-h-[32px] shrink-0 flex items-center justify-center mb-0.5">
+                    <svg className="w-8 h-8 -rotate-90 shrink-0" viewBox="0 0 36 36">
+                      <path
+                        className="text-slate-200/70"
+                        strokeWidth="3.5"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        style={{ color: t.color }}
+                        className="transition-all duration-500 ease-out"
+                        strokeDasharray={`${pct}, 100`}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute text-[8px] font-black text-slate-700">
+                      {t.isCompleted ? (
+                        <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                      ) : (
+                        `${pct}%`
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-bold text-slate-700 truncate w-full px-0.5" title={t.name}>
+                    {t.name}
+                  </span>
+
+                  <span className="text-[9px] font-mono text-slate-500">
+                    {t.actualHours}/{t.targetHours}h
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bento Card 3: Subject Breakdown with Week / Month Toggle (Fixed height h-[210px]) */}
