@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-2xs cursor-pointer"
         >
           <Settings2 className="w-3.5 h-3.5 text-slate-500" />
-          <span className="hidden sm:inline">Weekly Goals</span>
+          <span className="hidden sm:inline">Study Goals</span>
         </button>
 
         <button

@@ -34,6 +34,7 @@ interface CalendarViewProps {
   onChangeMonth: (date: Date) => void
   records: StudyRecord[]
   targets: WeeklyTarget[]
+  totalHoursTarget?: number
   onSelectDay: (date: Date) => void
   onAddSessionOnDay: (date: Date) => void
 }
@@ -43,6 +44,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onChangeMonth,
   records,
   targets,
+  totalHoursTarget,
   onSelectDay,
   onAddSessionOnDay
 }) => {
@@ -121,6 +123,28 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return 'evening'
   }
 
+  // Sort helper: Morning (AM) on top, Evening (PM) below, ordered chronologically
+  const sortRecordsByTimeOfDay = (a: StudyRecord, b: StudyRecord): number => {
+    const isMorningA = getRecordTimeOfDay(a) === 'morning'
+    const isMorningB = getRecordTimeOfDay(b) === 'morning'
+    if (isMorningA !== isMorningB) {
+      return isMorningA ? -1 : 1
+    }
+    // If both are morning or both evening, order chronologically by startTime
+    if (a.startTime && b.startTime) {
+      const timeDiff = a.startTime.localeCompare(b.startTime)
+      if (timeDiff !== 0) return timeDiff
+    }
+    if (a.startTime && !b.startTime) return -1
+    if (!a.startTime && b.startTime) return 1
+
+    // Fallback to createdAt ascending
+    if (a.createdAt && b.createdAt) {
+      return a.createdAt.localeCompare(b.createdAt)
+    }
+    return 0
+  }
+
   // Map subject to color helper (matching by subject, name, id, or keyword fallbacks)
   const getSubjectColor = (subject?: string, subjectName?: string): string => {
     const s = (subject || '').trim().toLowerCase()
@@ -187,6 +211,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const activeMorningMinutes = viewMode === 'week' ? morningWeekMinutes : morningMonthMinutes
   const activeEveningMinutes = viewMode === 'week' ? eveningWeekMinutes : eveningMonthMinutes
   const activeTotalMinutes = viewMode === 'week' ? totalWeekMinutes : totalMonthMinutes
+  const subjectsWeeklyTargetSum = Math.round(
+    targets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10
+  ) / 10
+  const effectiveWeeklyTarget = subjectsWeeklyTargetSum > 0 ? subjectsWeeklyTargetSum : (totalHoursTarget || 0)
+  const effectiveMonthlyTarget = Math.round(effectiveWeeklyTarget * 4 * 10) / 10
+
+  const activeTargetHours = effectiveWeeklyTarget > 0
+    ? (viewMode === 'week' ? effectiveWeeklyTarget : effectiveMonthlyTarget)
+    : null
 
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs select-none">
@@ -209,7 +242,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               )}
             </h2>
             <span className="text-xs font-semibold text-slate-400">
-              ({formatMinutes(activeTotalMinutes)})
+              ({formatMinutes(activeTotalMinutes)}
+              {activeTargetHours ? ` / ${activeTargetHours}h` : ''})
             </span>
           </div>
 
@@ -339,10 +373,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             const morningRecords = dayRecords.filter(r => getRecordTimeOfDay(r) === 'morning')
             const eveningRecords = dayRecords.filter(r => getRecordTimeOfDay(r) === 'evening')
 
-            const filteredRecords = dayRecords.filter(r => {
-              if (periodFilter === 'all') return true
-              return getRecordTimeOfDay(r) === periodFilter
-            })
+            const filteredRecords = dayRecords
+              .filter(r => {
+                if (periodFilter === 'all') return true
+                return getRecordTimeOfDay(r) === periodFilter
+              })
+              .sort(sortRecordsByTimeOfDay)
 
             return (
               <div
@@ -532,11 +568,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               const morningRecords = dayRecords.filter(r => getRecordTimeOfDay(r) === 'morning')
               const eveningRecords = dayRecords.filter(r => getRecordTimeOfDay(r) === 'evening')
 
-              // Filter records according to selected period
-              const filteredRecords = dayRecords.filter(r => {
-                if (periodFilter === 'all') return true
-                return getRecordTimeOfDay(r) === periodFilter
-              })
+              // Filter records according to selected period (Morning on top, Evening below)
+              const filteredRecords = dayRecords
+                .filter(r => {
+                  if (periodFilter === 'all') return true
+                  return getRecordTimeOfDay(r) === periodFilter
+                })
+                .sort(sortRecordsByTimeOfDay)
 
               return (
                 <div

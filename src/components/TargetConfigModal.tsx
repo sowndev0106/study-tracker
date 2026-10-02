@@ -11,25 +11,27 @@ interface TargetConfigModalProps {
   onSaveTotalHoursTarget: (hours: number) => Promise<void>
 }
 
-const HOURS_PRESETS = [4, 6, 8, 10, 12]
-
 export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
   isOpen,
   onClose,
   targets,
-  totalHoursTarget,
+  totalHoursTarget: _totalHoursTarget,
   onSaveTargets,
   onSaveTotalHoursTarget
 }) => {
   const [targetList, setTargetList] = useState<WeeklyTarget[]>(targets)
-  const [hoursGoal, setHoursGoal] = useState<number>(totalHoursTarget)
   const [isSaving, setIsSaving] = useState(false)
 
   // Reset when modal opens
   useEffect(() => {
     setTargetList(targets)
-    setHoursGoal(totalHoursTarget)
-  }, [targets, totalHoursTarget, isOpen])
+  }, [targets, isOpen])
+
+  // Automatically calculate total weekly hours from the subjects below
+  const calculatedWeeklyHours = Math.round(
+    targetList.reduce((sum, t) => sum + (Number(t.targetHoursPerWeek) || 0), 0) * 10
+  ) / 10
+  const calculatedMonthlyHours = Math.round(calculatedWeeklyHours * 4 * 10) / 10
 
   if (!isOpen) return null
 
@@ -70,7 +72,7 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
       setIsSaving(true)
       await Promise.all([
         onSaveTargets(targetList),
-        onSaveTotalHoursTarget(Number(hoursGoal))
+        onSaveTotalHoursTarget(Number(calculatedWeeklyHours))
       ])
       onClose()
     } catch (err) {
@@ -91,10 +93,10 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Configure Weekly Goals
+                Configure Study Goals
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Set target sessions and total study hours per week
+                Target hours and monthly goals are automatically calculated from each subject
               </p>
             </div>
           </div>
@@ -108,51 +110,28 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
 
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
-          {/* TOTAL WEEKLY HOURS GOAL CONFIG */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 shadow-2xs space-y-2.5">
+          {/* TOTAL HOURS SUMMARY - AUTO-CALCULATED FROM SUBJECTS BELOW */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/80 shadow-2xs space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-                <Target className="w-4 h-4 text-blue-600" />
-                <span>Total Weekly Hours Target:</span>
-              </label>
-              <span className="text-sm font-extrabold text-blue-700">
-                {hoursGoal} hrs / week
-              </span>
-            </div>
+              <div>
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Target className="w-4 h-4 text-blue-600" />
+                  <span>Total Calculated Target:</span>
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Automatically computed as sum of all {targetList.length} subjects below
+                </p>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {HOURS_PRESETS.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => setHoursGoal(h)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                    hoursGoal === h
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {h} hrs
-                </button>
-              ))}
-              <div className="flex items-center gap-1 ml-auto">
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  step="0.5"
-                  value={hoursGoal}
-                  onChange={(e) => setHoursGoal(Math.max(1, parseFloat(e.target.value) || 1))}
-                  className="w-16 px-2 py-1 text-xs font-bold text-center border border-slate-300 rounded-lg bg-white"
-                  placeholder="Custom"
-                />
-                <span className="text-xs font-semibold text-slate-500">hrs</span>
+              <div className="text-right">
+                <div className="text-base font-black text-blue-700">
+                  {calculatedWeeklyHours} hrs / week
+                </div>
+                <div className="text-xs font-bold text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-md border border-indigo-200/80 inline-block mt-0.5">
+                  = {calculatedMonthlyHours} hrs / month
+                </div>
               </div>
             </div>
-
-            <p className="text-[11px] text-slate-500 italic">
-              * The app automatically tracks all study sessions completed during the week against this total goal.
-            </p>
           </div>
 
           <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5 text-xs text-blue-800">
@@ -203,9 +182,14 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
 
                 <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-xs">
                   <div>
-                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">
-                      Sessions / week
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] text-slate-500 font-semibold block">
+                        Sessions / week
+                      </label>
+                      <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded">
+                        ~{target.targetSessionsPerWeek * 4}/mo
+                      </span>
+                    </div>
                     <input
                       type="number"
                       min="1"
@@ -223,9 +207,14 @@ export const TargetConfigModal: React.FC<TargetConfigModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 font-semibold block mb-1">
-                      Hours / week
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] text-slate-500 font-semibold block">
+                        Hours / week
+                      </label>
+                      <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded">
+                        ~{Math.round((target.targetHoursPerWeek || 2.0) * 4 * 10) / 10}h/mo
+                      </span>
+                    </div>
                     <input
                       type="number"
                       min="0.5"

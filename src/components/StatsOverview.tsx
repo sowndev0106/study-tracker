@@ -17,7 +17,12 @@ import {
   Edit2,
   Trash2,
   Sparkles,
-  Target
+  Target,
+  CheckCircle2,
+  AlertCircle,
+  Trophy,
+  Filter,
+  Check
 } from 'lucide-react'
 import {
   format,
@@ -30,7 +35,10 @@ import {
   eachDayOfInterval,
   startOfMonth,
   endOfMonth,
-  getDay
+  getDay,
+  startOfWeek,
+  endOfWeek,
+  getISOWeek
 } from 'date-fns'
 
 interface StatsOverviewProps {
@@ -62,6 +70,16 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all')
   const [selectedTimeOfDayFilter, setSelectedTimeOfDayFilter] = useState<'all' | 'morning' | 'evening'>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [historyTab, setHistoryTab] = useState<'week' | 'month'>('week')
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<'all' | 'achieved' | 'pending'>('all')
+
+  // Effective weekly and monthly targets derived strictly from subjects sum
+  const subjectsWeeklyTargetSum = useMemo(() => {
+    return Math.round(targets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10) / 10
+  }, [targets])
+
+  const effectiveWeeklyTarget = subjectsWeeklyTargetSum > 0 ? subjectsWeeklyTargetSum : totalHoursTarget
+  const effectiveMonthlyTarget = Math.round(effectiveWeeklyTarget * 4 * 10) / 10
 
   // Helper to determine Morning vs Evening for any record
   const getRecordTimeOfDay = (rec: StudyRecord): 'morning' | 'evening' => {
@@ -241,28 +259,226 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
   const maxDowHours = Math.max(...dayOfWeekStats.map(d => d.hours), 1.0)
   const peakDay = [...dayOfWeekStats].sort((a, b) => b.hours - a.hours)[0]
 
-  // Filtered session records for Logbook table
+  // Filtered session records for Logbook table (Date desc; on same date: Morning on top, Evening below)
   const logbookRecords = useMemo(() => {
-    return filteredByRange.filter(r => {
-      // Subject filter
-      if (selectedSubjectFilter !== 'all' && r.subject.toLowerCase() !== selectedSubjectFilter.toLowerCase()) {
-        return false
-      }
-      // Time of day filter
-      if (selectedTimeOfDayFilter !== 'all' && getRecordTimeOfDay(r) !== selectedTimeOfDayFilter) {
-        return false
-      }
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        const matchTitle = (r.title || '').toLowerCase().includes(q)
-        const matchNotes = (r.notes || '').toLowerCase().includes(q)
-        const matchSubject = (r.subjectName || r.subject).toLowerCase().includes(q)
-        return matchTitle || matchNotes || matchSubject
-      }
-      return true
-    })
+    return filteredByRange
+      .filter(r => {
+        // Subject filter
+        if (selectedSubjectFilter !== 'all' && r.subject.toLowerCase() !== selectedSubjectFilter.toLowerCase()) {
+          return false
+        }
+        // Time of day filter
+        if (selectedTimeOfDayFilter !== 'all' && getRecordTimeOfDay(r) !== selectedTimeOfDayFilter) {
+          return false
+        }
+        // Search query
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase()
+          const matchTitle = (r.title || '').toLowerCase().includes(q)
+          const matchNotes = (r.notes || '').toLowerCase().includes(q)
+          const matchSubject = (r.subjectName || r.subject).toLowerCase().includes(q)
+          return matchTitle || matchNotes || matchSubject
+        }
+        return true
+      })
+      .sort((a, b) => {
+        // Order by date descending
+        const dateDiff = b.date.localeCompare(a.date)
+        if (dateDiff !== 0) return dateDiff
+
+        // On the same date: Morning (AM) on top, Evening (PM) below
+        const isMorningA = getRecordTimeOfDay(a) === 'morning'
+        const isMorningB = getRecordTimeOfDay(b) === 'morning'
+        if (isMorningA !== isMorningB) return isMorningA ? -1 : 1
+
+        if (a.startTime && b.startTime) {
+          const timeDiff = a.startTime.localeCompare(b.startTime)
+          if (timeDiff !== 0) return timeDiff
+        }
+        if (a.startTime && !b.startTime) return -1
+        if (!a.startTime && b.startTime) return 1
+
+        return (a.createdAt || '').localeCompare(b.createdAt || '')
+      })
   }, [filteredByRange, selectedSubjectFilter, selectedTimeOfDayFilter, searchQuery])
+
+  // Calculate weekly achievement history across all tracked records
+  const weeklyHistory = useMemo(() => {
+    const today = new Date()
+    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 })
+
+    // Collect unique week starts
+    const weekStartMap = new Map<string, Date>()
+    weekStartMap.set(format(currentWeekStart, 'yyyy-MM-dd'), currentWeekStart)
+
+    records.forEach(r => {
+      try {
+        const d = parseISO(r.date)
+        const ws = startOfWeek(d, { weekStartsOn: 1 })
+        const key = format(ws, 'yyyy-MM-dd')
+        if (!weekStartMap.has(key)) {
+          weekStartMap.set(key, ws)
+        }
+      } catch {}
+    })
+
+    const sortedWeekStarts = Array.from(weekStartMap.values()).sort(
+      (a, b) => b.getTime() - a.getTime()
+    )
+
+    return sortedWeekStarts.map(ws => {
+      const we = endOfWeek(ws, { weekStartsOn: 1 })
+      const wsStr = format(ws, 'yyyy-MM-dd')
+      const weStr = format(we, 'yyyy-MM-dd')
+      const weekNum = getISOWeek(ws)
+      const isCurrentWeek = ws.getTime() === currentWeekStart.getTime()
+
+      const weekRecs = records.filter(r => r.date >= wsStr && r.date <= weStr)
+      const totalMins = weekRecs.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+      const totalHours = Math.round((totalMins / 60) * 10) / 10
+      const isAchieved = totalHours >= effectiveWeeklyTarget
+      const pct = Math.min(100, Math.round((totalHours / (effectiveWeeklyTarget || 1)) * 100))
+
+      // Subject breakdown for this week
+      const subjectStats = targets.map(t => {
+        const recs = weekRecs.filter(r => {
+          const matchSub = r.subject && (r.subject.toLowerCase() === t.subject.toLowerCase() || r.subject === t.id)
+          const matchName = r.subjectName && t.name && r.subjectName.toLowerCase() === t.name.toLowerCase()
+          return matchSub || matchName
+        })
+        const sMins = recs.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+        const sHours = Math.round((sMins / 60) * 10) / 10
+        const tHours = t.targetHoursPerWeek || 2.0
+        const isCompleted = sHours >= tHours
+        return {
+          target: t,
+          hours: sHours,
+          targetHours: tHours,
+          sessions: recs.length,
+          isCompleted
+        }
+      })
+
+      const completedSubjectsCount = subjectStats.filter(s => s.isCompleted).length
+
+      return {
+        id: `week-${wsStr}`,
+        weekNumber: weekNum,
+        startDate: ws,
+        endDate: we,
+        dateLabel: `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`,
+        isCurrentWeek,
+        totalHours,
+        targetHours: effectiveWeeklyTarget,
+        isAchieved,
+        pct,
+        sessionsCount: weekRecs.length,
+        subjectStats,
+        completedSubjectsCount
+      }
+    })
+  }, [records, targets, effectiveWeeklyTarget])
+
+  // Calculate monthly achievement history across all tracked records
+  const monthlyHistory = useMemo(() => {
+    const today = new Date()
+    const currentMonthStart = startOfMonth(today)
+
+    const monthStartMap = new Map<string, Date>()
+    monthStartMap.set(format(currentMonthStart, 'yyyy-MM'), currentMonthStart)
+
+    records.forEach(r => {
+      try {
+        const d = parseISO(r.date)
+        const ms = startOfMonth(d)
+        const key = format(ms, 'yyyy-MM')
+        if (!monthStartMap.has(key)) {
+          monthStartMap.set(key, ms)
+        }
+      } catch {}
+    })
+
+    const sortedMonthStarts = Array.from(monthStartMap.values()).sort(
+      (a, b) => b.getTime() - a.getTime()
+    )
+
+    return sortedMonthStarts.map(ms => {
+      const msStr = format(ms, 'yyyy-MM')
+      const isCurrentMonth = ms.getTime() === currentMonthStart.getTime()
+
+      const monthRecs = records.filter(r => {
+        try {
+          return format(parseISO(r.date), 'yyyy-MM') === msStr
+        } catch {
+          return false
+        }
+      })
+
+      const totalMins = monthRecs.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+      const totalHours = Math.round((totalMins / 60) * 10) / 10
+      const isAchieved = totalHours >= effectiveMonthlyTarget
+      const pct = Math.min(100, Math.round((totalHours / (effectiveMonthlyTarget || 1)) * 100))
+
+      // Subject breakdown for this month
+      const subjectStats = targets.map(t => {
+        const recs = monthRecs.filter(r => {
+          const matchSub = r.subject && (r.subject.toLowerCase() === t.subject.toLowerCase() || r.subject === t.id)
+          const matchName = r.subjectName && t.name && r.subjectName.toLowerCase() === t.name.toLowerCase()
+          return matchSub || matchName
+        })
+        const sMins = recs.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+        const sHours = Math.round((sMins / 60) * 10) / 10
+        const tHours = Math.round((t.targetHoursPerWeek || 2.0) * 4 * 10) / 10
+        const isCompleted = sHours >= tHours
+        return {
+          target: t,
+          hours: sHours,
+          targetHours: tHours,
+          sessions: recs.length,
+          isCompleted
+        }
+      })
+
+      const completedSubjectsCount = subjectStats.filter(s => s.isCompleted).length
+
+      return {
+        id: `month-${msStr}`,
+        monthDate: ms,
+        monthLabel: format(ms, 'MMMM yyyy'),
+        isCurrentMonth,
+        totalHours,
+        targetHours: effectiveMonthlyTarget,
+        isAchieved,
+        pct,
+        sessionsCount: monthRecs.length,
+        subjectStats,
+        completedSubjectsCount
+      }
+    })
+  }, [records, targets, effectiveMonthlyTarget])
+
+  const filteredWeeklyHistory = useMemo(() => {
+    if (historyStatusFilter === 'achieved') {
+      return weeklyHistory.filter(w => w.isAchieved)
+    }
+    if (historyStatusFilter === 'pending') {
+      return weeklyHistory.filter(w => !w.isAchieved)
+    }
+    return weeklyHistory
+  }, [weeklyHistory, historyStatusFilter])
+
+  const filteredMonthlyHistory = useMemo(() => {
+    if (historyStatusFilter === 'achieved') {
+      return monthlyHistory.filter(m => m.isAchieved)
+    }
+    if (historyStatusFilter === 'pending') {
+      return monthlyHistory.filter(m => !m.isAchieved)
+    }
+    return monthlyHistory
+  }, [monthlyHistory, historyStatusFilter])
+
+  const achievedWeeksCount = weeklyHistory.filter(w => w.isAchieved).length
+  const achievedMonthsCount = monthlyHistory.filter(m => m.isAchieved).length
 
   const handleDelete = async (id: string, title: string) => {
     if (onDeleteSession && window.confirm(`Are you sure you want to delete "${title || 'this session'}"?`)) {
@@ -387,9 +603,9 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
               </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Goal: ~{(totalHoursTarget * 4.3).toFixed(1)}h/month</span>
+              <span>Goal: {effectiveMonthlyTarget}h/month ({effectiveWeeklyTarget}h/week)</span>
               <span className="font-bold text-blue-600">
-                {Math.min(100, Math.round((totalHours / (totalHoursTarget * 4.3 || 1)) * 100))}%
+                {Math.min(100, Math.round((totalHours / (effectiveMonthlyTarget || 1)) * 100))}%
               </span>
             </div>
           </div>
@@ -465,7 +681,312 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
           </div>
         </div>
 
-        {/* SECTION 2: Deep Morning vs Evening Comparative Module */}
+        {/* SECTION 2: Goal Target Achievement History (Weekly & Monthly Reports) */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <span>Target Achievement History</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Review which weeks and months achieved your study target ({effectiveWeeklyTarget}h/wk • {effectiveMonthlyTarget}h/mo)
+              </p>
+            </div>
+
+            {/* Controls: Week/Month Switcher + Status Filter */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Tab: Weekly vs Monthly */}
+              <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold">
+                <button
+                  onClick={() => setHistoryTab('week')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyTab === 'week'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Weekly History ({weeklyHistory.length})
+                </button>
+                <button
+                  onClick={() => setHistoryTab('month')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyTab === 'month'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Monthly History ({monthlyHistory.length})
+                </button>
+              </div>
+
+              {/* Status Filter */}
+              <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold">
+                <button
+                  onClick={() => setHistoryStatusFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyStatusFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setHistoryStatusFilter('achieved')}
+                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                    historyStatusFilter === 'achieved'
+                      ? 'bg-emerald-100 text-emerald-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-emerald-700'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Achieved</span>
+                </button>
+                <button
+                  onClick={() => setHistoryStatusFilter('pending')}
+                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                    historyStatusFilter === 'pending'
+                      ? 'bg-amber-100 text-amber-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-amber-700'
+                  }`}
+                >
+                  <Clock className="w-3 h-3 text-amber-600" />
+                  <span>Pending</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Summary KPI Ribbon */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Weekly Goals Met</span>
+                <div className="text-base font-black text-slate-900 mt-0.5">
+                  {achievedWeeksCount} / {weeklyHistory.length} <span className="text-xs text-slate-400 font-semibold">weeks</span>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                {weeklyHistory.length > 0 ? Math.round((achievedWeeksCount / weeklyHistory.length) * 100) : 0}% success
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Monthly Goals Met</span>
+                <div className="text-base font-black text-slate-900 mt-0.5">
+                  {achievedMonthsCount} / {monthlyHistory.length} <span className="text-xs text-slate-400 font-semibold">months</span>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                {monthlyHistory.length > 0 ? Math.round((achievedMonthsCount / monthlyHistory.length) * 100) : 0}% success
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Standards</span>
+                <div className="text-xs font-bold text-slate-900 mt-0.5">
+                  {effectiveWeeklyTarget}h/wk • {effectiveMonthlyTarget}h/mo
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                {targets.length} subjects
+              </span>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          {historyTab === 'week' ? (
+            filteredWeeklyHistory.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
+                <p className="text-xs text-slate-500 font-semibold">No weekly records match this filter</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {filteredWeeklyHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      item.isAchieved
+                        ? 'bg-gradient-to-br from-emerald-50/40 via-white to-white border-emerald-200 shadow-2xs'
+                        : item.isCurrentWeek
+                        ? 'bg-gradient-to-br from-blue-50/30 via-white to-white border-blue-200 shadow-2xs'
+                        : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200">
+                          Week {item.weekNumber}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500">
+                          {item.dateLabel}
+                        </span>
+                      </div>
+
+                      {item.isAchieved ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Achieved ({item.pct}%)</span>
+                        </span>
+                      ) : item.isCurrentWeek ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Current Week ({item.pct}%)</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          <span>Incomplete ({item.pct}%)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Hours Progress Bar */}
+                    <div className="space-y-1 my-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800">
+                          {item.totalHours} <span className="font-normal text-slate-400">/ {item.targetHours}h logged</span>
+                        </span>
+                        <span className="font-semibold text-slate-500 text-[11px]">
+                          {item.sessionsCount} session(s)
+                        </span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            item.isAchieved ? 'bg-emerald-500' : 'bg-blue-600'
+                          }`}
+                          style={{ width: `${Math.min(100, item.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Subject Contribution Badges */}
+                    <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {item.subjectStats.map((s) => (
+                        <span
+                          key={s.target.id}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-medium ${
+                            s.isCompleted
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                              : s.hours > 0
+                              ? 'bg-slate-50 border-slate-200 text-slate-700'
+                              : 'bg-slate-50/50 border-slate-100 text-slate-400'
+                          }`}
+                          title={`${s.target.name}: ${s.hours}h of ${s.targetHours}h target (${s.sessions} sessions)`}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: s.target.color }}
+                          />
+                          <span className="truncate max-w-[80px]">{s.target.name}</span>
+                          <span className="font-bold">{s.hours}/{s.targetHours}h</span>
+                          {s.isCompleted && <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            filteredMonthlyHistory.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
+                <p className="text-xs text-slate-500 font-semibold">No monthly records match this filter</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {filteredMonthlyHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      item.isAchieved
+                        ? 'bg-gradient-to-br from-emerald-50/40 via-white to-white border-emerald-200 shadow-2xs'
+                        : item.isCurrentMonth
+                        ? 'bg-gradient-to-br from-indigo-50/30 via-white to-white border-indigo-200 shadow-2xs'
+                        : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200">
+                          {item.monthLabel}
+                        </span>
+                      </div>
+
+                      {item.isAchieved ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Goal Hit ({item.pct}%)</span>
+                        </span>
+                      ) : item.isCurrentMonth ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>In Progress ({item.pct}%)</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          <span>Incomplete ({item.pct}%)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Hours Progress Bar */}
+                    <div className="space-y-1 my-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800">
+                          {item.totalHours} <span className="font-normal text-slate-400">/ {item.targetHours}h logged</span>
+                        </span>
+                        <span className="font-semibold text-slate-500 text-[11px]">
+                          {item.sessionsCount} session(s)
+                        </span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            item.isAchieved ? 'bg-emerald-500' : 'bg-indigo-600'
+                          }`}
+                          style={{ width: `${Math.min(100, item.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Subject Contribution Badges */}
+                    <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {item.subjectStats.map((s) => (
+                        <span
+                          key={s.target.id}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-medium ${
+                            s.isCompleted
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                              : s.hours > 0
+                              ? 'bg-slate-50 border-slate-200 text-slate-700'
+                              : 'bg-slate-50/50 border-slate-100 text-slate-400'
+                          }`}
+                          title={`${s.target.name}: ${s.hours}h of ${s.targetHours}h monthly target (${s.sessions} sessions)`}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: s.target.color }}
+                          />
+                          <span className="truncate max-w-[80px]">{s.target.name}</span>
+                          <span className="font-bold">{s.hours}/{s.targetHours}h</span>
+                          {s.isCompleted && <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* SECTION 3: Deep Morning vs Evening Comparative Module */}
         <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-blue-50/20 to-indigo-50/30 p-5 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
             <div>
@@ -730,7 +1251,20 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
                 )
                 const subMins = subRecs.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
                 const subHours = Math.round((subMins / 60) * 10) / 10
-                const subPct = totalMinutes > 0 ? Math.round((subMins / totalMinutes) * 100) : 0
+                
+                // Target hours for this period (Monthly for month/last30, Weekly otherwise)
+                const isMonthlyPeriod = rangeFilter === 'month' || rangeFilter === 'last30'
+                const subjectTargetHours = isMonthlyPeriod
+                  ? Math.round((target.targetHoursPerWeek || 2.0) * 4 * 10) / 10
+                  : (target.targetHoursPerWeek || 2.0)
+                const optionalTargetSessions = isMonthlyPeriod
+                  ? target.targetSessionsPerWeek * 4
+                  : target.targetSessionsPerWeek
+
+                // Progress percentage is strictly based on hours target
+                const hoursProgressPct = Math.min(100, Math.round((subHours / (subjectTargetHours || 1)) * 100))
+                const isTargetMet = subHours >= subjectTargetHours
+
                 const subMorningCount = subRecs.filter(r => getRecordTimeOfDay(r) === 'morning').length
                 const subEveningCount = subRecs.filter(r => getRecordTimeOfDay(r) === 'evening').length
 
@@ -746,22 +1280,29 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
                           style={{ backgroundColor: target.color }}
                         />
                         <span className="font-extrabold text-slate-900">{target.name}</span>
-                        <span className="text-[11px] text-slate-400 font-semibold">
-                          ({subPct}% share)
-                        </span>
+                        {isTargetMet && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded-full">
+                            <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" /> Target Met
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                        <span>{subHours}h</span>
-                        <span className="text-slate-400 font-normal">({subRecs.length} sessions)</span>
+                        <span className="font-black text-slate-900">{subHours}</span>
+                        <span className="text-slate-400 font-normal">/ {subjectTargetHours}h</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                          isTargetMet ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {hoursProgressPct}%
+                        </span>
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
+                    {/* Progress Bar (Strictly based on target hours) */}
                     <div className="h-1.5 w-full bg-slate-200/70 rounded-full overflow-hidden mb-2">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                          width: `${subPct}%`,
+                          width: `${hoursProgressPct}%`,
                           backgroundColor: target.color
                         }}
                       />
@@ -779,7 +1320,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
                         </span>
                       </span>
                       <span className="text-slate-400">
-                        Target: {target.targetSessionsPerWeek} sess/wk ({target.targetHoursPerWeek}h)
+                        Goal: <strong className="text-slate-600 font-semibold">{subjectTargetHours}h</strong> ({subRecs.length}/{optionalTargetSessions} sessions optional)
                       </span>
                     </div>
                   </div>

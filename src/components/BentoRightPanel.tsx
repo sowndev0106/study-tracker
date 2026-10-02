@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { Flame, Target, Plus, ChevronRight, ChevronLeft, Award, ShieldCheck, Sun, Moon, Check, Clock } from 'lucide-react'
 import { WeekProgressSummary, WeeklyTarget, StudyRecord } from '../types'
 import { formatMinutes } from '../utils/helpers'
@@ -18,7 +18,7 @@ interface BentoRightPanelProps {
 
 export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
   weekProgress,
-  targets: _targets,
+  targets,
   records,
   currentMonth,
   referenceDate,
@@ -27,6 +27,7 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
   onOpenTargets,
   storageStatus: _storageStatus
 }) => {
+  const [subjectViewMode, setSubjectViewMode] = useState<'week' | 'month'>('week')
   // Helper to determine Morning vs Evening for any record
   const getRecordTimeOfDay = (rec: StudyRecord): 'morning' | 'evening' => {
     if (rec.timeOfDay) return rec.timeOfDay === 'morning' ? 'morning' : 'evening'
@@ -87,25 +88,120 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
 
   const streakDays = calculateStreak()
 
+  // Weekly & monthly target strictly calculated from sum of subjects
+  const subjectsWeeklyTargetSum = Math.round(
+    targets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10
+  ) / 10
+  const effectiveWeeklyTarget = subjectsWeeklyTargetSum > 0
+    ? subjectsWeeklyTargetSum
+    : (weekProgress.totalHoursTarget || 6.0)
+  const monthHoursTarget = Math.round(effectiveWeeklyTarget * 4 * 10) / 10
+  const totalHoursMonth = Math.round((totalMinutesMonth / 60) * 10) / 10
+  const monthPercent = Math.min(100, Math.round((totalHoursMonth / (monthHoursTarget || 1)) * 100))
+  const isMonthCompleted = totalHoursMonth >= monthHoursTarget
+  const remainingMonthHours = Math.max(0, Math.round((monthHoursTarget - totalHoursMonth) * 10) / 10)
+
+  // Monthly progress per subject (4x of weekly targets)
+  const monthSubjectProgress = useMemo(() => {
+    return targets.map(target => {
+      const sRecords = monthRecords.filter(r => {
+        const matchSubject = r.subject && (r.subject === target.subject || r.subject === target.id)
+        const matchName = r.subjectName && target.name && r.subjectName.toLowerCase() === target.name.toLowerCase()
+        return matchSubject || matchName
+      })
+      const monthMins = sRecords.reduce((sum, r) => sum + (r.durationMinutes || 0), 0)
+      const actualHoursMonth = Math.round((monthMins / 60) * 10) / 10
+      const targetHoursMonth = Math.round((target.targetHoursPerWeek || 2.0) * 4 * 10) / 10
+      const currentSessionsMonth = sRecords.length
+      const targetSessionsMonth = target.targetSessionsPerWeek * 4
+      const isCompletedMonth = actualHoursMonth >= targetHoursMonth
+      const pct = Math.min(100, Math.round((actualHoursMonth / (targetHoursMonth || 1)) * 100))
+
+      return {
+        target,
+        actualHours: actualHoursMonth,
+        targetHours: targetHoursMonth,
+        currentSessions: currentSessionsMonth,
+        targetSessions: targetSessionsMonth,
+        isCompleted: isCompletedMonth,
+        pct
+      }
+    })
+  }, [targets, monthRecords])
+
+  const monthCompletedSubjectsCount = monthSubjectProgress.filter(t => t.isCompleted).length
+
   // Latest record
   const latestRecord = records.length > 0 ? records[0] : null
 
   // Progress percentage
   const hoursPercent = Math.min(
     100,
-    Math.round((weekProgress.totalHours / (weekProgress.totalHoursTarget || 1)) * 100)
+    Math.round((weekProgress.totalHours / (effectiveWeeklyTarget || 1)) * 100)
   )
 
+  const isWeeklyHoursCompleted = weekProgress.totalHours >= effectiveWeeklyTarget
   const isAllTargetsCompleted =
     weekProgress.targets.length > 0 &&
     weekProgress.targets.every(t => t.isCompleted) &&
-    weekProgress.isTotalHoursCompleted
+    isWeeklyHoursCompleted
 
   return (
-    <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col gap-3 justify-start overflow-y-auto pr-0.5 select-none">
+    <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col gap-2.5 justify-start overflow-y-auto pr-0.5 select-none">
       
-      {/* Bento Card 1: Weekly Goal (Fixed height h-[125px]) */}
-      <div className="h-[125px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-4 flex items-center justify-between">
+      {/* Bento Card 1: DEDICATED MONTHLY TARGET CARD (Fixed height h-[110px]) */}
+      <div className="h-[110px] shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white border border-indigo-200/80 shadow-xs p-3.5 flex items-center justify-between">
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 text-xs font-bold text-indigo-700 uppercase tracking-wider">
+              <Target className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{format(currentMonth, 'MMMM yyyy')} Goal</span>
+            </div>
+          </div>
+
+          <div className="text-2xl font-black text-slate-900 mt-0.5">
+            {totalHoursMonth} <span className="text-sm font-semibold text-slate-400">/ {monthHoursTarget}h</span>
+          </div>
+
+          <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-indigo-600">
+            {isMonthCompleted ? (
+              <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
+                <Award className="w-3 h-3 text-emerald-600" /> 100% Monthly Goal Hit!
+              </span>
+            ) : (
+              <span>● {monthPercent}% completed ({remainingMonthHours}h left)</span>
+            )}
+          </div>
+        </div>
+
+        {/* Circular Progress Gauge for Monthly Target */}
+        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+            <path
+              className="text-indigo-100/80"
+              strokeWidth="3.5"
+              stroke="currentColor"
+              fill="none"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            />
+            <path
+              className={`${isMonthCompleted ? 'text-emerald-500' : 'text-indigo-600'} transition-all duration-500 ease-out`}
+              strokeDasharray={`${monthPercent}, 100`}
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              stroke="currentColor"
+              fill="none"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            />
+          </svg>
+          <div className="absolute text-[11px] font-black text-indigo-900">
+            {monthPercent}%
+          </div>
+        </div>
+      </div>
+
+      {/* Bento Card 2: Weekly Goal (Fixed height h-[110px]) */}
+      <div className="h-[110px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex items-center justify-between">
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -131,8 +227,8 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             </div>
           </div>
 
-          <div className="text-2xl font-black text-slate-900 mt-1">
-            {weekProgress.totalHours} <span className="text-sm font-semibold text-slate-400">/ {weekProgress.totalHoursTarget}h</span>
+          <div className="text-2xl font-black text-slate-900 mt-0.5">
+            {weekProgress.totalHours} <span className="text-sm font-semibold text-slate-400">/ {effectiveWeeklyTarget}h</span>
           </div>
 
           <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-emerald-600">
@@ -146,9 +242,9 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
           </div>
         </div>
 
-        {/* Circular Progress Ring */}
-        <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+        {/* Circular Progress Gauge */}
+        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
             <path
               className="text-slate-100"
               strokeWidth="3.5"
@@ -157,27 +253,49 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
             <path
-              className="text-blue-600 transition-all duration-500 stroke-current"
+              className="text-blue-600 transition-all duration-500 ease-out"
               strokeDasharray={`${hoursPercent}, 100`}
               strokeWidth="3.5"
               strokeLinecap="round"
+              stroke="currentColor"
               fill="none"
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
           </svg>
-          <div className="absolute text-center">
-            <span className="text-xs font-black text-slate-800">{hoursPercent}%</span>
+          <div className="absolute text-[11px] font-black text-slate-700">
+            {hoursPercent}%
           </div>
         </div>
       </div>
 
-      {/* Bento Card 2: Subject Breakdown (Clean, spacious, unclipped) */}
-      <div className="h-[215px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 shrink-0">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-blue-600" />
-            <span>Subject Goals</span>
-          </span>
+      {/* Bento Card 3: Subject Breakdown with Week / Month Toggle (Fixed height h-[210px]) */}
+      <div className="h-[210px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between">
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <Target className="w-3.5 h-3.5 text-blue-600" />
+              <span>Subject Goals</span>
+            </span>
+            <div className="inline-flex p-0.5 rounded-lg bg-slate-100 text-[10px] font-semibold border border-slate-200/60">
+              <button
+                onClick={() => setSubjectViewMode('week')}
+                className={`px-1.5 py-0.2 rounded transition-all cursor-pointer ${
+                  subjectViewMode === 'week' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => setSubjectViewMode('month')}
+                className={`px-1.5 py-0.2 rounded transition-all cursor-pointer ${
+                  subjectViewMode === 'month' ? 'bg-white text-indigo-700 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="View monthly target for each subject"
+              >
+                Month
+              </button>
+            </div>
+          </div>
           <button
             onClick={onOpenTargets}
             className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer transition-colors"
@@ -187,8 +305,14 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
         </div>
 
         <div className="py-1 space-y-2 overflow-y-auto scrollbar-none flex-1 min-h-0">
-          {weekProgress.targets.map(({ target, currentSessions, targetSessions, actualHours, targetHours, isCompleted }) => {
-            const pct = Math.min(100, Math.round((currentSessions / (targetSessions || 1)) * 100))
+          {(subjectViewMode === 'month' ? monthSubjectProgress : weekProgress.targets).map((item) => {
+            const target = 'target' in item ? item.target : item
+            const actualHours = item.actualHours
+            const targetHours = item.targetHours
+            const currentSessions = item.currentSessions
+            const targetSessions = item.targetSessions
+            const isCompleted = actualHours >= targetHours
+            const pct = Math.min(100, Math.round((actualHours / (targetHours || 1)) * 100))
 
             return (
               <div key={target.id} className="group flex flex-col gap-1">
@@ -241,30 +365,45 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
         {/* Separated Clean Footer */}
         <div className="pt-2 border-t border-slate-100 shrink-0 flex items-center justify-between text-[11px]">
           <div className="text-slate-500 font-medium">
-            {weekProgress.isTotalHoursCompleted ? (
-              <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
-                🎉 Weekly target reached!
-              </span>
+            {subjectViewMode === 'week' ? (
+              isWeeklyHoursCompleted ? (
+                <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                  🎉 Weekly target reached!
+                </span>
+              ) : (
+                <span>
+                  <strong className="text-slate-800 font-bold">
+                    {Math.max(0, Math.round((effectiveWeeklyTarget - weekProgress.totalHours) * 10) / 10)}h
+                  </strong>{' '}
+                  <span className="text-slate-400">left this week</span>
+                </span>
+              )
             ) : (
-              <span>
-                <strong className="text-slate-800 font-bold">
-                  {Math.max(0, Math.round((weekProgress.totalHoursTarget - weekProgress.totalHours) * 10) / 10)}h
-                </strong>{' '}
-                <span className="text-slate-400">left this week</span>
-              </span>
+              isMonthCompleted ? (
+                <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                  🎉 Monthly target reached!
+                </span>
+              ) : (
+                <span>
+                  <strong className="text-slate-800 font-bold">{remainingMonthHours}h</strong>{' '}
+                  <span className="text-slate-400">left in {format(currentMonth, 'MMM')}</span>
+                </span>
+              )
             )}
           </div>
           <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60">
-            {weekProgress.targets.filter(t => t.isCompleted).length}/{weekProgress.targets.length} completed
+            {subjectViewMode === 'week'
+              ? `${weekProgress.targets.filter(t => t.isCompleted).length}/${weekProgress.targets.length} completed`
+              : `${monthCompletedSubjectsCount}/${targets.length} completed`}
           </span>
         </div>
       </div>
 
-      {/* Bento Card 3: Month Summary (Fixed height h-[175px] - Soothing low-contrast gradient) */}
-      <div className="h-[175px] shrink-0 rounded-2xl bg-gradient-to-br from-slate-50/90 via-blue-50/40 to-indigo-50/30 border border-blue-200/50 shadow-xs p-3.5 flex flex-col justify-between">
+      {/* Bento Card 4: Month Activity & Quick Log (Fixed height h-[115px]) */}
+      <div className="h-[115px] shrink-0 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/80 shadow-xs p-3 flex flex-col justify-between">
         <div className="flex justify-between items-center">
           <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-            {format(currentMonth, 'MMMM yyyy')} Overview
+            {format(currentMonth, 'MMMM')} Activity
           </span>
           <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 text-[10px] font-extrabold flex items-center gap-1">
             <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
@@ -272,37 +411,32 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
           </span>
         </div>
 
-        <div>
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
-            {formatMinutes(totalMinutesMonth)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-            <span>{totalSessionsMonth} sessions logged</span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-0.5 text-amber-700 font-semibold">
-              <Sun className="w-3 h-3 text-amber-500 fill-amber-500" />
-              {morningMonthCount} AM
-            </span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-0.5 text-indigo-700 font-semibold">
-              <Moon className="w-3 h-3 text-indigo-500 fill-indigo-500" />
-              {eveningMonthCount} PM
-            </span>
-          </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>{totalSessionsMonth} sessions</span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-0.5 text-amber-700 font-semibold">
+            <Sun className="w-3 h-3 text-amber-500 fill-amber-500" />
+            {morningMonthCount} AM
+          </span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-0.5 text-indigo-700 font-semibold">
+            <Moon className="w-3 h-3 text-indigo-500 fill-indigo-500" />
+            {eveningMonthCount} PM
+          </span>
         </div>
 
         <button
           onClick={onOpenNewSession}
-          className="w-full py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Log Study Session</span>
         </button>
       </div>
 
-      {/* Bento Card 4: Recent Session (Fixed height h-[115px] - Clean, spaced, uncluttered) */}
-      <div className="h-[115px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 shrink-0">
+      {/* Bento Card 5: Recent Session (Fixed height h-[105px] - Clean, spaced, uncluttered) */}
+      <div className="h-[105px] shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3 flex flex-col justify-between">
+        <div className="flex items-center justify-between pb-1 border-b border-slate-100 shrink-0">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-blue-600" />
             <span>Recent Session</span>
@@ -322,7 +456,7 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             >
               {latestRecord.title || latestRecord.subjectName}
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
               {getRecordTimeOfDay(latestRecord) === 'morning' ? (
                 <span className="text-amber-700 font-semibold inline-flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.2 rounded text-[10px] border border-amber-200/50 shrink-0">
                   <Sun className="w-2.5 h-2.5 text-amber-500 fill-amber-500" /> Morning
@@ -340,10 +474,10 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             </div>
           </div>
         ) : (
-          <div className="text-xs text-slate-400 italic py-2">No study sessions logged yet</div>
+          <div className="text-xs text-slate-400 italic py-1">No study sessions logged yet</div>
         )}
 
-        <div className="text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-100 pt-1.5 shrink-0">
+        <div className="text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-100 pt-1 shrink-0">
           <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
             <span>Auto-sync active</span>

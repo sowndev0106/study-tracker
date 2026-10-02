@@ -160,7 +160,7 @@ export async function getRecordsFromR2(bucket?: R2Bucket): Promise<StudyRecord[]
     }
     const text = await object.text()
     const parsed = JSON.parse(text) as StudyRecord[]
-    if (!parsed || parsed.length === 0) {
+    if (!Array.isArray(parsed)) {
       await bucket.put(RECORDS_KEY, JSON.stringify(DEFAULT_RECORDS, null, 2), {
         httpMetadata: { contentType: 'application/json' }
       })

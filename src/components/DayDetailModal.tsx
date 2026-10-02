@@ -50,6 +50,25 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const morningCount = dayRecords.filter(r => getRecordTimeOfDay(r) === 'morning').length
   const eveningCount = dayRecords.filter(r => getRecordTimeOfDay(r) === 'evening').length
 
+  // Sort: Morning (AM) on top, Evening (PM) below, chronologically
+  const sortedDayRecords = [...dayRecords].sort((a, b) => {
+    const isMorningA = getRecordTimeOfDay(a) === 'morning'
+    const isMorningB = getRecordTimeOfDay(b) === 'morning'
+    if (isMorningA !== isMorningB) {
+      return isMorningA ? -1 : 1
+    }
+    if (a.startTime && b.startTime) {
+      const timeDiff = a.startTime.localeCompare(b.startTime)
+      if (timeDiff !== 0) return timeDiff
+    }
+    if (a.startTime && !b.startTime) return -1
+    if (!a.startTime && b.startTime) return 1
+    if (a.createdAt && b.createdAt) {
+      return a.createdAt.localeCompare(b.createdAt)
+    }
+    return 0
+  })
+
   const getSubjectColor = (subject?: string, subjectName?: string): string => {
     const s = (subject || '').trim().toLowerCase()
     const sn = (subjectName || '').trim().toLowerCase()
@@ -149,7 +168,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               </button>
             </div>
           ) : (
-            dayRecords.map((record) => {
+            sortedDayRecords.map((record) => {
               const color = getSubjectColor(record.subject)
               const isMorning = getRecordTimeOfDay(record) === 'morning'
 

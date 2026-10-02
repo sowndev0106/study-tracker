@@ -25,7 +25,7 @@ export function calculateWeekProgress(
   records: StudyRecord[],
   targets: WeeklyTarget[],
   referenceDate: Date = new Date(),
-  totalHoursTarget: number = 6.0
+  totalHoursTarget?: number
 ): WeekProgressSummary {
   const { start, end, weekNumber } = getWeekBounds(referenceDate)
   const startStr = format(start, 'yyyy-MM-dd')
@@ -39,6 +39,14 @@ export function calculateWeekProgress(
       return false
     }
   })
+
+  // Automatically count target subjects hours sum (e.g. 2 + 2 + 2 + 5 = 11h)
+  const subjectsSum = Math.round(
+    targets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10
+  ) / 10
+
+  const resolvedTotalHoursTarget =
+    subjectsSum > 0 ? subjectsSum : (totalHoursTarget && totalHoursTarget > 0 ? totalHoursTarget : 6.0)
 
   let totalMinutes = 0
   let totalSessions = 0
@@ -60,6 +68,8 @@ export function calculateWeekProgress(
     const isSessionsCompleted = currentSessions >= target.targetSessionsPerWeek
     const isHoursCompleted = actualHours >= targetHours
 
+    const pct = Math.min(100, Math.round((actualHours / (targetHours || 1)) * 100))
+
     return {
       target,
       currentSessions,
@@ -69,13 +79,14 @@ export function calculateWeekProgress(
       targetHours,
       isSessionsCompleted,
       isHoursCompleted,
-      isCompleted: isSessionsCompleted && isHoursCompleted,
+      isCompleted: isHoursCompleted,
+      pct,
       records: matchingRecords
     }
   })
 
   const totalHours = Math.round((totalMinutes / 60) * 10) / 10
-  const isTotalHoursCompleted = totalHours >= totalHoursTarget
+  const isTotalHoursCompleted = totalHours >= resolvedTotalHoursTarget
 
   return {
     weekStart: startStr,
@@ -83,7 +94,7 @@ export function calculateWeekProgress(
     weekNumber,
     totalMinutes,
     totalHours,
-    totalHoursTarget,
+    totalHoursTarget: resolvedTotalHoursTarget,
     isTotalHoursCompleted,
     totalSessions,
     targets: targetSummaries

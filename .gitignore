@@ -26,3 +26,8 @@ dist-ssr
 # Cloudflare Wrangler
 .wrangler/
 .dev.vars
+
+# Local backups
+r2-backup-*.json
+preview-options.html
+

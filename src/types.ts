@@ -60,6 +60,7 @@ export interface WeekProgressSummary {
     isSessionsCompleted: boolean
     isHoursCompleted: boolean
     isCompleted: boolean
+    pct?: number
     records: StudyRecord[]
   }[]
 }

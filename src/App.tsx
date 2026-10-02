@@ -67,7 +67,10 @@ export const App: React.FC = () => {
         setStorageStatus(health)
         setTargets(targetsData)
         setRecords(recordsData)
-        if (settingsData?.totalHoursTarget) {
+        const subjectsSum = Math.round(targetsData.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10) / 10
+        if (subjectsSum > 0) {
+          setTotalHoursTarget(subjectsSum)
+        } else if (settingsData?.totalHoursTarget) {
           setTotalHoursTarget(settingsData.totalHoursTarget)
         }
       } catch (err) {
@@ -80,10 +83,17 @@ export const App: React.FC = () => {
     initData()
   }, [isAuthenticated])
 
+  // Auto-calculated total hours target based on sum of all subject targets
+  const effectiveTotalHoursTarget = useMemo(() => {
+    const sum = targets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0)
+    const rounded = Math.round(sum * 10) / 10
+    return rounded > 0 ? rounded : totalHoursTarget
+  }, [targets, totalHoursTarget])
+
   // Calculate week progress
   const weekProgress = useMemo(() => {
-    return calculateWeekProgress(records, targets, selectedWeekDate, totalHoursTarget)
-  }, [records, targets, selectedWeekDate, totalHoursTarget])
+    return calculateWeekProgress(records, targets, selectedWeekDate, effectiveTotalHoursTarget)
+  }, [records, targets, selectedWeekDate, effectiveTotalHoursTarget])
 
   // --- Handlers ---
   const handleOpenNewSession = (date?: Date, subject?: string) => {
@@ -119,6 +129,11 @@ export const App: React.FC = () => {
   const handleSaveTargets = async (newTargets: WeeklyTarget[]) => {
     const saved = await api.updateTargets(newTargets)
     setTargets(saved)
+    const sum = Math.round(newTargets.reduce((acc, t) => acc + (Number(t.targetHoursPerWeek) || 0), 0) * 10) / 10
+    if (sum > 0) {
+      setTotalHoursTarget(sum)
+      await api.updateSettings({ totalHoursTarget: sum })
+    }
   }
 
   const handleSaveTotalHoursTarget = async (hours: number) => {
@@ -190,7 +205,7 @@ export const App: React.FC = () => {
             <StatsOverview
               records={records}
               targets={targets}
-              totalHoursTarget={totalHoursTarget}
+              totalHoursTarget={effectiveTotalHoursTarget}
               currentMonth={selectedMonth}
               onChangeMonth={setSelectedMonth}
               onOpenNewSession={() => handleOpenNewSession()}
@@ -220,6 +235,7 @@ export const App: React.FC = () => {
               onChangeMonth={setSelectedMonth}
               records={records}
               targets={targets}
+              totalHoursTarget={effectiveTotalHoursTarget}
               onSelectDay={(day) => setSelectedDay(day)}
               onAddSessionOnDay={(day) => handleOpenNewSession(day)}
             />
@@ -335,7 +351,7 @@ export const App: React.FC = () => {
         isOpen={targetModalOpen}
         onClose={() => setTargetModalOpen(false)}
         targets={targets}
-        totalHoursTarget={totalHoursTarget}
+        totalHoursTarget={effectiveTotalHoursTarget}
         onSaveTargets={handleSaveTargets}
         onSaveTotalHoursTarget={handleSaveTotalHoursTarget}
       />
