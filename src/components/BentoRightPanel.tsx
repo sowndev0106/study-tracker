@@ -154,22 +154,20 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
       <div className="shrink-0 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-blue-50/40 to-white border border-indigo-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2.5">
         {/* Top: Monthly Overview & Overall Progress Ring */}
         <div className="flex items-center justify-between">
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-1 text-xs font-bold text-indigo-700 uppercase tracking-wider">
-                <Target className="w-3.5 h-3.5 text-indigo-600" />
-                <span>{format(currentMonth, 'MMMM yyyy')} Goal</span>
-              </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 uppercase tracking-wider truncate">
+              <Target className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">{format(currentMonth, 'MMMM yyyy')} Goal</span>
             </div>
 
             <div className="text-2xl font-black text-slate-900 mt-0.5">
               {totalHoursMonth} <span className="text-sm font-semibold text-slate-400">/ {monthHoursTarget}h</span>
             </div>
 
-            <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-indigo-600">
+            <div className="text-xs font-semibold mt-0.5 flex items-center gap-1 text-indigo-600 truncate">
               {isMonthCompleted ? (
                 <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
-                  <Award className="w-3 h-3 text-emerald-600" /> 100% Monthly Goal Hit!
+                  <Award className="w-3 h-3 text-emerald-600 shrink-0" /> 100% Monthly Goal Hit!
                 </span>
               ) : (
                 <span>● {monthPercent}% completed ({remainingMonthHours}h left)</span>
@@ -178,8 +176,8 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
           </div>
 
           {/* Main Circular Progress Gauge for Monthly Target */}
-          <div className="relative w-13 h-13 shrink-0 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+          <div className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center">
+            <svg className="w-12 h-12 -rotate-90 shrink-0" viewBox="0 0 36 36">
               <path
                 className="text-indigo-100/80"
                 strokeWidth="3.5"
@@ -206,10 +204,10 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
         {/* Bottom: Subtle Subject Monthly Target Mini Rings */}
         <div className="pt-2 border-t border-indigo-100/70 grid grid-cols-4 gap-1 text-center">
           {monthSubjectProgress.map((s) => (
-            <div key={s.target.id} className="flex flex-col items-center group cursor-default">
+            <div key={s.target.id} className="flex flex-col items-center group cursor-default min-w-0">
               {/* Mini Ring Gauge */}
-              <div className="relative w-7 h-7 shrink-0 flex items-center justify-center mb-0.5">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <div className="relative w-8 h-8 min-w-[32px] min-h-[32px] max-w-[32px] max-h-[32px] shrink-0 flex items-center justify-center mb-0.5">
+                <svg className="w-8 h-8 -rotate-90 shrink-0" viewBox="0 0 36 36">
                   <path
                     className="text-slate-200/70"
                     strokeWidth="3.5"
@@ -228,7 +226,7 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <div className="absolute text-[7.5px] font-black text-slate-700">
+                <div className="absolute text-[8px] font-black text-slate-700">
                   {s.isCompleted ? (
                     <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
                   ) : (

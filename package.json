@@ -9,6 +9,7 @@
     "dev:worker": "wrangler dev worker/index.ts --port 8788",
     "build": "vite build",
     "preview": "vite preview",
+    "test:visual": "node scripts/test-layout.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
     "concurrently": "^10.0.5",
+    "playwright": "^1.63.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.19",
     "typescript": "^7.0.2",
