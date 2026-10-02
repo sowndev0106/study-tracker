@@ -204,7 +204,7 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
       : `${weekProgress.totalSessions} sessions logged`
 
   return (
-    <div className="w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
+    <div className="w-full md:w-[330px] xl:w-[350px] shrink-0 h-full flex flex-col justify-between overflow-hidden select-none">
       {/* Scrollable Upper Cards Area */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 scrollbar-none">
         {/* Bento Card 1: DEDICATED MONTHLY TARGET CARD WITH EXPANDABLE SUBJECT MINI RINGS */}

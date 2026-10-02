@@ -264,7 +264,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         {/* Filter & View Mode & Navigation Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto scrollbar-none max-w-full pb-0.5">
           {/* View Mode Switcher: Month vs Week */}
           <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold">
             <button
@@ -537,25 +537,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       ) : (
         /* ================= MONTHLY LAYOUT (Multi-week calendar grid) ================= */
         <>
-          {/* Days of Week Header (Mon - Sun) */}
-          <div className="grid grid-cols-7 border-b border-slate-200/80 bg-slate-50/70 text-center text-xs font-bold text-slate-500 py-1.5 shrink-0">
-            {weekDayHeaders.map((day, idx) => (
-              <div
-                key={day}
-                className={`${idx >= 5 ? 'text-amber-700/80' : ''}`}
-              >
-                {day}
-              </div>
-            ))}
+          {/* Mobile Swipe / Scroll Hint */}
+          <div className="md:hidden px-3 py-1 bg-slate-50 border-b border-slate-200/60 flex items-center justify-between text-[10px] font-medium text-slate-500 shrink-0 select-none">
+            <span>👈 Swipe for all 7 days</span>
+            <span>Scroll down for weeks 👇</span>
           </div>
 
-          {/* Calendar Grid Cells (Dynamic rows fitting 100% remaining height) */}
-          <div
-            className="grid grid-cols-7 flex-1 gap-[1px] bg-slate-200/80 overflow-hidden"
-            style={{
-              gridTemplateRows: `repeat(${numWeeks}, minmax(0, 1fr))`
-            }}
-          >
+          <div className="flex-1 min-h-0 overflow-auto scrollbar-thin flex flex-col">
+            <div className="min-w-[680px] md:min-w-0 flex-1 flex flex-col h-full">
+              {/* Days of Week Header (Mon - Sun) */}
+              <div className="grid grid-cols-7 border-b border-slate-200/80 bg-slate-100 text-center text-xs font-bold text-slate-600 py-1.5 shrink-0 sticky top-0 z-20 shadow-2xs">
+              {weekDayHeaders.map((day, idx) => (
+                <div
+                  key={day}
+                  className={`${idx >= 5 ? 'text-amber-700/80' : ''}`}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Grid Cells (Dynamic rows on desktop, scrollable min-height on mobile) */}
+            <div
+              className="grid grid-cols-7 flex-1 gap-[1px] bg-slate-200/80 [grid-template-rows:repeat(var(--weeks),minmax(120px,1fr))] md:[grid-template-rows:repeat(var(--weeks),minmax(0,1fr))]"
+              style={{
+                '--weeks': numWeeks
+              } as React.CSSProperties}
+            >
             {monthDays.map((day) => {
               const dateStr = format(day, 'yyyy-MM-dd')
               const isCurrent = isSameMonth(day, monthStart)
@@ -580,7 +588,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <div
                   key={dateStr}
                   onClick={() => onSelectDay(day)}
-                  className={`group h-full p-1.5 sm:p-2 flex flex-col justify-between transition-colors cursor-pointer overflow-hidden ${
+                  className={`group h-full min-h-[120px] md:min-h-0 p-1.5 sm:p-2 flex flex-col justify-between transition-colors cursor-pointer overflow-hidden ${
                     isCurrent
                       ? isCurrentDay
                         ? 'bg-blue-50/40 hover:bg-blue-50/70'
@@ -714,7 +722,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               )
             })}
           </div>
-        </>
+        </div>
+      </div>
+      </>
       )}
     </div>
   )

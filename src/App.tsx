@@ -217,7 +217,7 @@ export const App: React.FC = () => {
             />
           ) : activeTab === 'goals' ? (
             <div className="h-full overflow-y-auto px-1 py-1 flex justify-center scrollbar-none">
-              <div className="w-full max-w-sm">
+              <div className="w-full max-w-sm pb-24 md:pb-0">
                 <BentoRightPanel
                   weekProgress={weekProgress}
                   targets={targets}
