@@ -58,15 +58,15 @@ async function run() {
   console.log('Taking desktop collapsed screenshot...');
   await page.screenshot({ path: './screenshots/desktop-collapsed.png' });
 
-  // Expand Month details
-  const detailButtons = page.locator('button:has-text("detail")');
-  console.log('Clicking month detail...');
-  await detailButtons.first().click();
+  // Expand Month details via circular gauge
+  const gaugeButtons = page.locator('button[title*="breakdown"]');
+  console.log('Clicking month gauge...');
+  await gaugeButtons.first().click();
   await page.waitForTimeout(300);
 
-  // Expand Week details
-  console.log('Clicking week detail...');
-  await detailButtons.nth(1).click();
+  // Expand Week details via circular gauge
+  console.log('Clicking week gauge...');
+  await gaugeButtons.nth(1).click();
   await page.waitForTimeout(300);
 
   console.log('Taking expanded screenshots...');

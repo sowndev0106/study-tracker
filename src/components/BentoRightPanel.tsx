@@ -157,19 +157,9 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
         {/* Top: Monthly Overview & Overall Progress Ring */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
-            <div className="flex items-center justify-between gap-1 text-xs font-bold text-indigo-700 uppercase tracking-wider">
-              <div className="flex items-center gap-1.5 truncate">
-                <Target className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">{format(currentMonth, 'MMMM yyyy')} Goal</span>
-              </div>
-              <button
-                onClick={() => setShowMonthDetail(v => !v)}
-                className="inline-flex items-center gap-0.5 text-[10px] font-normal lowercase tracking-normal text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
-                title={showMonthDetail ? "Hide details" : "Show details"}
-              >
-                <span>detail</span>
-                <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${showMonthDetail ? 'rotate-180' : ''}`} />
-              </button>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 uppercase tracking-wider truncate">
+              <Target className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">{format(currentMonth, 'MMMM yyyy')} Goal</span>
             </div>
 
             <div className="text-2xl font-black text-slate-900 mt-0.5">
@@ -187,11 +177,15 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             </div>
           </div>
 
-          {/* Main Circular Progress Gauge for Monthly Target */}
-          <div className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center">
+          {/* Main Circular Progress Gauge for Monthly Target (Interactive Toggle) */}
+          <button
+            onClick={() => setShowMonthDetail(v => !v)}
+            className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+            title={showMonthDetail ? "Click to hide subject breakdown" : "Click to view subject breakdown"}
+          >
             <svg className="w-12 h-12 -rotate-90 shrink-0" viewBox="0 0 36 36">
               <path
-                className="text-indigo-100/80"
+                className="text-indigo-100/80 group-hover:text-indigo-200/80 transition-colors"
                 strokeWidth="3.5"
                 stroke="currentColor"
                 fill="none"
@@ -207,10 +201,12 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
-            <div className="absolute text-[11px] font-black text-indigo-900">
-              {monthPercent}%
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="text-[11px] font-black text-indigo-900 group-hover:text-indigo-600 transition-colors">
+                {monthPercent}%
+              </span>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Bottom: Subtle Subject Monthly Target Mini Rings (Expandable) */}
@@ -267,37 +263,28 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
       <div className="shrink-0 rounded-2xl bg-white border border-slate-200/80 shadow-xs p-3.5 flex flex-col justify-between gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
-            <div className="flex items-center justify-between gap-1 text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <div className="flex items-center gap-1.5 truncate">
+            <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
                 <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                 <span>Week {weekProgress.weekNumber}</span>
-                <div className="flex items-center border border-slate-200 rounded-md overflow-hidden bg-slate-50 ml-1">
-                  <button
-                    onClick={() => onChangeReferenceDate(subWeeks(referenceDate, 1))}
-                    className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
-                    title="Previous week"
-                  >
-                    <ChevronLeft className="w-3 h-3" />
-                  </button>
-                  <div className="w-[1px] h-3 bg-slate-200"></div>
-                  <button
-                    onClick={() => onChangeReferenceDate(addWeeks(referenceDate, 1))}
-                    className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
-                    title="Next week"
-                  >
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
               </div>
-
-              <button
-                onClick={() => setShowWeekDetail(v => !v)}
-                className="inline-flex items-center gap-0.5 text-[10px] font-normal lowercase tracking-normal text-slate-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
-                title={showWeekDetail ? "Hide details" : "Show details"}
-              >
-                <span>detail</span>
-                <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${showWeekDetail ? 'rotate-180' : ''}`} />
-              </button>
+              <div className="flex items-center border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                <button
+                  onClick={() => onChangeReferenceDate(subWeeks(referenceDate, 1))}
+                  className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
+                  title="Previous week"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <div className="w-[1px] h-3 bg-slate-200"></div>
+                <button
+                  onClick={() => onChangeReferenceDate(addWeeks(referenceDate, 1))}
+                  className="p-0.5 hover:bg-white text-slate-500 hover:text-slate-800 transition-all active:scale-95 cursor-pointer"
+                  title="Next week"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
 
             <div className="text-2xl font-black text-slate-900 mt-0.5">
@@ -315,11 +302,15 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
             </div>
           </div>
 
-          {/* Circular Progress Gauge */}
-          <div className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center">
+          {/* Circular Progress Gauge (Interactive Toggle) */}
+          <button
+            onClick={() => setShowWeekDetail(v => !v)}
+            className="relative w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] shrink-0 flex items-center justify-center rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+            title={showWeekDetail ? "Click to hide subject breakdown" : "Click to view subject breakdown"}
+          >
             <svg className="w-12 h-12 -rotate-90 shrink-0" viewBox="0 0 36 36">
               <path
-                className="text-slate-100"
+                className="text-slate-100 group-hover:text-slate-200 transition-colors"
                 strokeWidth="3.5"
                 stroke="currentColor"
                 fill="none"
@@ -335,10 +326,12 @@ export const BentoRightPanel: React.FC<BentoRightPanelProps> = ({
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
-            <div className="absolute text-[11px] font-black text-slate-700">
-              {hoursPercent}%
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="text-[11px] font-black text-slate-700 group-hover:text-blue-600 transition-colors">
+                {hoursPercent}%
+              </span>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Bottom: Subtle Subject Weekly Target Mini Rings (Expandable) */}
