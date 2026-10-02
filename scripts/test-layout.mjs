@@ -52,33 +52,29 @@ async function run() {
 
   console.log('Navigating to http://localhost:5173...');
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
-
   await page.waitForSelector('text=Goal', { timeout: 10000 });
   await page.waitForTimeout(600);
 
-  console.log('Taking desktop full screenshot (collapsed by default)...');
+  console.log('Taking desktop collapsed screenshot...');
   await page.screenshot({ path: './screenshots/desktop-collapsed.png' });
 
-  // Take screenshot of header
-  const header = page.locator('header');
-  if (await header.isVisible()) {
-    console.log('Taking header screenshot...');
-    await header.screenshot({ path: './screenshots/header-minimal.png' });
-  }
-
-  // Click Month "Details"
-  console.log('Expanding Month details...');
-  const monthDetailBtn = page.locator('text=October 2026 Goal').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').locator('button:has-text("Details")');
-  await monthDetailBtn.click();
+  // Expand Month details
+  const detailButtons = page.locator('button:has-text("detail")');
+  console.log('Clicking month detail...');
+  await detailButtons.first().click();
   await page.waitForTimeout(300);
-  await page.screenshot({ path: './screenshots/desktop-month-expanded.png' });
 
-  // Click Week "Details"
-  console.log('Expanding Week details...');
-  const weekDetailBtn = page.locator('text=Week').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').locator('button:has-text("Details")');
-  await weekDetailBtn.click();
+  // Expand Week details
+  console.log('Clicking week detail...');
+  await detailButtons.nth(1).click();
   await page.waitForTimeout(300);
+
+  console.log('Taking expanded screenshots...');
   await page.screenshot({ path: './screenshots/desktop-both-expanded.png' });
+
+  // Crop weekly card
+  const weekCard = page.locator('text=Week 40').locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').first();
+  await weekCard.screenshot({ path: './screenshots/weekly-card-expanded.png' });
 
   console.log('All tests completed successfully!');
   await browser.close();
